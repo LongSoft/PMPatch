@@ -14,30 +14,42 @@
 #define ERR_NO_MODULE                    4
 
 /* Module UUIDs */
-const unsigned char PWRMGMT_UUID[] =     {'\x70','\x39','\x78','\x8C',
+const UINT8 PWRMGMT_UUID[] =             {'\x70','\x39','\x78','\x8C',
                                           '\x2A','\xF0','\x4D','\x4A',
                                           '\xAF','\x09','\x87','\x97',
                                           '\xA5','\x1E','\xEC','\x8D'};
-const unsigned char CPUPEI_UUID[] =      {'\xA9','\xAF','\xB5','\x2B',
+const UINT8 CPUPEI_UUID[] =              {'\xA9','\xAF','\xB5','\x2B',
                                           '\x33','\xFF','\x7B','\x41',
                                           '\x84','\x97','\xCB','\x77',
                                           '\x3C','\x2B','\x93','\xBF'};
+const UINT8 VOLUME_TOP_UUID[] =          {'\x2E','\x06','\xA0','\x1B',
+                                          '\x79','\xC7','\x82','\x45',
+                                          '\x85','\x66','\x33','\x6A',
+                                          '\xE8','\xF7','\x8F','\x09'};
+
 /* Patch strings */
-const unsigned char PATCH_STRING[] =     {'\x75','\x08','\x0F','\xBA',
-                                          '\xE8','\x0F','\x89','\x44',
-                                          '\x24','\x30'};
-const unsigned char PATCHED_STRING[] =   {'\xEB','\x08','\x0F','\xBA',
-                                          '\xE8','\x0F','\x89','\x44',
-                                          '\x24','\x30'};
+const UINT8 PATCH_STRING[] =             {'\x80','\xFB','\x01',       
+                                          '\x75','\x08',              
+                                          '\x0F','\xBA','\xE8','\x0F',
+                                          '\x89','\x44','\x24','\x30'};
+const UINT8 PATCHED_STRING[] =           {'\x90','\x90','\x90',       
+                                          '\x90','\x90',              
+                                          '\x90','\x90','\x90','\x90',
+                                          '\x90','\x90','\x90','\x90'};
+
 /* Data offsets and sizes*/
 #define MODULE_UUID_LENGTH               16
+#define MODULE_STATE_OFFSET              23
 #define MODULE_SIZE_OFFSET               20
 #define MODULE_COMPRESSED_SIZE_OFFSET    172
 #define MODULE_COMPRESSED_DATA_OFFSET    9
 #define MODULE_DATA_OFFSET               181
 #define MODULE_HEADER_CHECKSUM_OFFSET    16
-#define MODULE_DATA_CHECKSUM_START       24
 #define MODULE_DATA_CHECKSUM_OFFSET      17
+#define MODULE_DATA_CHECKSUM_START       24
+
+/* Module state */
+#define MODULE_STATE_DELETED             0x1F
 
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm */
 /* Finds pattern in string */
@@ -87,7 +99,7 @@ int calculate_checksum(UINT8* data, UINT32 length, UINT8* checksum)
     return 1;
 }
 
-/* Converst UINT32 to 3 bytes in reversed order. */
+/* Converts UINT32 to 3 bytes in reversed order. */
 /* Returns 1 on success or 0 on error */
 int int2size(UINT32 size, UINT8* module_size)
 {
@@ -109,6 +121,7 @@ int size2int(UINT8* module_size, UINT32* size)
     *size = (module_size[2] << 16) + 
             (module_size[1] << 8) + 
              module_size[0];
+    return 1;
 }
 
 /* Patches module */
@@ -147,7 +160,7 @@ int patch_module(UINT8* module)
     if(!decompressed || !scratch)
         goto error;
 
-    /* Trying to unpack module*/
+    /* Trying to unpack module */
     if(TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != EFI_SUCCESS)
         goto error;
 
@@ -156,7 +169,7 @@ int patch_module(UINT8* module)
     if(!string)
         goto error;
 
-    /* Patching unpacked module*/
+    /* Patching unpacked module */
     memcpy(string, PATCHED_STRING, sizeof(PATCHED_STRING));
     
     /* Determining buffer size for compressed module */
@@ -164,29 +177,29 @@ int patch_module(UINT8* module)
     if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_BUFFER_TOO_SMALL)
         goto error;
     
-    /* Reallocating buffer*/
+    /* Reallocating buffer */
     scratch = (UINT8*)realloc(scratch, scratch_size);
 
-    /* Compressing modified module*/
+    /* Compressing modified module */
     if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_SUCCESS)
         goto error;
     
-    /* Resizing module*/
+    /* Checking size */
     if (data_size < scratch_size)
     {
         grow = scratch_size - data_size;
         end = module + MODULE_DATA_OFFSET + data_size;
-        /* Checking that there are free space after the module*/
+        /* Checking that there are free space after the module */
         while(grow--)
-            if(*end-- != (UINT8)'\xFF')
-                goto error; /* TODO: Mark module as deleted and insert a new one at the end of volume */
+            if(*end-- != 0xFF)
+                goto error;
     }
     else if (data_size > scratch_size)
     {
         grow = data_size - scratch_size;
-        end = module + MODULE_DATA_OFFSET + scratch_size;
+        end = module + MODULE_DATA_OFFSET + scratch_size + 1;
         while(grow--)
-            *end-- = (UINT8)'\xFF'; 
+            *end-- = 0xFF; 
     }
 
     /* Writing new module sizes */
@@ -236,18 +249,17 @@ int main(int argc, char* argv[])
     UINT8* rest;
     INT32 rest_size;
     UINT8* pwrmgmt;
-    UINT8* cpupei;
     UINT32 module_counter;
 
     if(argc < 3)
     {
-        printf("PMPatch v0.1.1\nThis program patches ASUS BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.2.0\nThis program patches ASUS BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
 
-    inputfile = argv[1];
-    outputfile = argv[2];
+    inputfile = argv[1]/*"in.rom"*/;
+    outputfile = argv[2]/*"out.rom"*/;
 
      /* Opening input file */
     file = fopen(inputfile, "rb");
@@ -290,13 +302,15 @@ int main(int argc, char* argv[])
         pwrmgmt = find_pattern(rest, rest_size, PWRMGMT_UUID, MODULE_UUID_LENGTH);
         if(pwrmgmt)
         {
+            rest_size = filesize - (pwrmgmt - buffer);
+            rest = pwrmgmt + 1;
+            module_counter++;
+
             if(patch_module(pwrmgmt))
                 printf("PowerManagement module at %08X patched.\n", pwrmgmt - buffer);
             else
                 printf("PowerManagement module at %08X not patched.\n", pwrmgmt - buffer);
-            rest_size = filesize - (pwrmgmt - buffer);
-            rest = pwrmgmt + 1;
-            module_counter++;
+            
         }
     }
     while(pwrmgmt);
