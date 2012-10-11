@@ -1,4 +1,4 @@
 PMPatch
 =======
 
-Utility to patch ASUS BIOS PowerManagement module for MacOS X SpeedStep implementation
+Utility to patch UEFI BIOS PowerManagement module to be compatible with MacOS X SpeedStep implementation

@@ -48,9 +48,6 @@ const UINT8 PATCHED_STRING[] =           {'\x90','\x90','\x90',
 #define MODULE_DATA_CHECKSUM_OFFSET      17
 #define MODULE_DATA_CHECKSUM_START       24
 
-/* Module state */
-#define MODULE_STATE_DELETED             0x1F
-
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm */
 /* Finds pattern in string */
 /* Returns pointer to the first symbol of found pattern, or NULL if not found */
@@ -197,7 +194,7 @@ int patch_module(UINT8* module)
     else if (data_size > scratch_size)
     {
         grow = data_size - scratch_size;
-        end = module + MODULE_DATA_OFFSET + scratch_size + 1;
+        end = module + MODULE_DATA_OFFSET + data_size - 1;
         while(grow--)
             *end-- = 0xFF; 
     }
@@ -253,13 +250,13 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("PMPatch v0.2.0\nThis program patches ASUS BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.2.1\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
 
-    inputfile = argv[1]/*"in.rom"*/;
-    outputfile = argv[2]/*"out.rom"*/;
+    inputfile = argv[1]/*/"in.rom"*/;
+    outputfile = argv[2]/*/"out.rom"*/;
 
      /* Opening input file */
     file = fopen(inputfile, "rb");
