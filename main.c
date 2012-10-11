@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "module.h"
+#include "patch.h"
 
 /* Program return codes */
 #define ERR_OK                           0
@@ -22,13 +22,13 @@ int main(int argc, char* argv[])
     INT32 read;
     UINT8* rest;
     INT32 rest_size;
-    UINT8* pwrmgmt;
+    UINT8* module;
     UINT32 module_counter;
     UINT8 error_code;
 
     if(argc < 3)
     {
-        printf("PMPatch v0.2.2\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.3.0\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
@@ -74,25 +74,51 @@ int main(int argc, char* argv[])
     rest_size = filesize;
     do
     {
-        pwrmgmt = find_pattern(rest, rest_size, PWRMGMT_UUID, MODULE_UUID_LENGTH);
-        if(pwrmgmt)
+        module = find_pattern(rest, rest_size, PWRMGMT_UUID, MODULE_UUID_LENGTH);
+        if(module)
         {
-            rest_size = filesize - (pwrmgmt - buffer);
-            rest = pwrmgmt + 1;
+            rest_size = filesize - (module - buffer);
+            rest = module + 1;
             module_counter++;
 
-            if(patch_module(pwrmgmt, &error_code))
-                printf("PowerManagement module at %08X patched.\n", pwrmgmt - buffer);
+            if(patch_powermanagement_module(module, &error_code))
+                printf("PowerManagement module at %08X patched.\n", module - buffer);
             else
-                printf("PowerManagement module at %08X not patched.\n%s\n", pwrmgmt - buffer, PATCH_MODULE_ERROR_MESSAGES[error_code]);
+                printf("PowerManagement module at %08X not patched.\n%s\n", module - buffer, PATCH_PWRMGMT_ERROR_MESSAGES[error_code]);
         }
     }
-    while(pwrmgmt);
+    while(module);
 
     if(!module_counter)
     {
-        printf("PowerManagement module not found. Nothing to do.\n");
-        return ERR_NO_MODULE;
+        printf("PowerManagement module not found.\n");
+        
+        /* Searching for CpuPei modules and patching them if found */
+        module_counter = 0;
+        rest = buffer;
+        rest_size = filesize;
+        do
+        {
+            module = find_pattern(rest, rest_size, CPUPEI_UUID, MODULE_UUID_LENGTH);
+            if(module)
+            {
+                rest_size = filesize - (module - buffer);
+                rest = module + 1;
+                module_counter++;
+
+                if(patch_cpupei_module(module, &error_code))
+                    printf("CpuPei module at %08X patched.\n", module - buffer);
+                else
+                    printf("CpuPei module at %08X not patched.\n%s\n", module - buffer, PATCH_CPUPEI_ERROR_MESSAGES[error_code]);
+            }
+        }
+        while(module);
+
+        if(!module_counter)
+        {
+            printf("CpuPei module not found. Nothing to do.\n");
+            return ERR_NO_MODULE;
+        }
     }
     
     /* Creating output file*/
