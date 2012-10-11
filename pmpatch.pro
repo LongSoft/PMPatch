@@ -1,6 +1,6 @@
 TEMPLATE = app
 CONFIG += console
-CONFIG -= qt
+CONFIG -= qt app_bundle
  
 SOURCES += \
     pmpatch.c \
@@ -9,7 +9,7 @@ SOURCES += \
     EDK2/EfiCompress.c \
     EDK2/EfiUtilityMsgs.c \
     EDK2/TianoCompress.c
- 
+
 HEADERS += \
     EDK2/BaseTypes.h \
     EDK2/BuildVersion.h \ 
@@ -18,7 +18,6 @@ HEADERS += \
     EDK2/Decompress.h \
     EDK2/EfiCompress.h \
     EDK2/EfiUtilityMsgs.h \
-    EDK2/ProcessorBind32.h \
-    EDK2/ProcessorBind64.h \
-    EDK2/UefiBaseTypes.h   
-
+    EDK2/UefiBaseTypes.h \
+    EDK2/ProcessorBind.h
+ 

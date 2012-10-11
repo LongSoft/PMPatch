@@ -22,7 +22,7 @@
 //
 // Include processor specific binding
 //
-#include "ProcessorBind32.h"
+#include "ProcessorBind.h"
 #include <stdarg.h>
 
 //
