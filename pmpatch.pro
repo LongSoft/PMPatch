@@ -3,7 +3,8 @@ CONFIG += console
 CONFIG -= qt app_bundle
  
 SOURCES += \
-    pmpatch.c \
+    main.c \
+    module.c \
     EDK2/CommonLib.c \
     EDK2/Decompress.c \
     EDK2/EfiCompress.c \
@@ -11,6 +12,7 @@ SOURCES += \
     EDK2/TianoCompress.c
 
 HEADERS += \
+    module.h \
     EDK2/BaseTypes.h \
     EDK2/BuildVersion.h \ 
     EDK2/CommonLib.h \
