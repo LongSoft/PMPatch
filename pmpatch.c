@@ -241,8 +241,8 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("PMPatch v0.1\nThis program patches ASUS BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
-            "Usage: MPatcher INFILE OUTFILE\n\n");
+        printf("PMPatch v0.1.1\nThis program patches ASUS BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+            "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
 
