@@ -1,5 +1,5 @@
-#ifndef __PWRMGMT_H__
-#define __PWRMGMT_H__
+#ifndef __PATCH_H__
+#define __PATCH_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,4 +59,4 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code);
 /* Returns 1 on success or 0 on error and error_code is set to non-zero */
 int patch_cpupei_module(UINT8* module, UINT8* error_code);
 
-#endif /* __PWRMGMT_H__ */
+#endif /* __PATCH_H__ */

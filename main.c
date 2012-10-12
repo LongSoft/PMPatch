@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("PMPatch v0.3.0\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.3.1\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
