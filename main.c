@@ -1,10 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "patch.h"
 
-/* Program return codes */
+/* Return codes */
 #define ERR_OK                           0
 #define ERR_ARGS                         1
 #define ERR_INPUT_FILE                   2
@@ -28,7 +27,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("PMPatch v0.3.1\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.3.2\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }

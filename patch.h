@@ -52,11 +52,11 @@ int int2size(UINT32 size, UINT8* module_size);
 int size2int(UINT8* module_size, UINT32* size);
 
 /* Patches PowerManagement module */
-/* Returns 1 on success or 0 on error and error_code is set to non-zero */
+/* Returns 1 on success and sets *error_code to zero or 0 on error and sets *error_code to non-zero */
 int patch_powermanagement_module(UINT8* module, UINT8* error_code);
 
 /* Patches CpuPei module */
-/* Returns 1 on success or 0 on error and error_code is set to non-zero */
+/* Returns 1 on success and sets *error_code to zero or 0 on error and sets *error_code to non-zero */
 int patch_cpupei_module(UINT8* module, UINT8* error_code);
 
 #endif /* __PATCH_H__ */
