@@ -14,7 +14,8 @@ extern const UINT8 VOLUME_TOP_UUID[];
 /* Patch strings */
 extern const UINT8 PWRMGMT_PATCH_STRING[];
 extern const UINT8 CPUPEI_PATCH_STRING[];
-extern const UINT8 PWRMGMT_PATCHED_STRING[];
+extern const UINT8 PWRMGMT_PATCHED_STRINGS[][13];
+extern const UINT32 PWRMGMT_PATCHED_STRINGS_COUNT;
 extern const UINT8 CPUPEI_PATCHED_STRING[];
 
 /* Data offsets and sizes*/

@@ -27,13 +27,13 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("PMPatch v0.3.2\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("PMPatch v0.3.3\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
 
-    inputfile = argv[1]/*/"in.rom"*/;
-    outputfile = argv[2]/*/"out.rom"*/;
+    inputfile = argv[1];
+    outputfile = argv[2];
 
      /* Opening input file */
     file = fopen(inputfile, "rb");
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
 
         if(!module_counter)
         {
-            printf("CpuPei module not found. Nothing to do.\n");
+            printf("CpuPei module not found.\n");
             return ERR_NO_MODULE;
         }
     }
@@ -130,8 +130,8 @@ int main(int argc, char* argv[])
     /* Writing modified BIOS file*/
     if(fwrite(buffer, sizeof(char), filesize, file) != filesize)
     {
-        perror("Can't write input file.\n");
-        return ERR_INPUT_FILE;
+        perror("Can't write output file.\n");
+        return ERR_OUTPUT_FILE;
     }
 
     /* Closing output file */

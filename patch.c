@@ -16,10 +16,13 @@ const UINT8 PWRMGMT_PATCH_STRING[] =     {0x80,0xFB,0x01,
                                           0x75,0x08,              
                                           0x0F,0xBA,0xE8,0x0F,
                                           0x89,0x44,0x24,0x30};
-const UINT8 PWRMGMT_PATCHED_STRING[] =   {0x90,0x90,0x90,       
-                                          0x90,0x90,              
-                                          0x90,0x90,0x90,0x90,
-                                          0x90,0x90,0x90,0x90};
+const UINT8 PWRMGMT_PATCHED_STRINGS[][13] =  {
+    {0x80,0xFB,0x01,0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30},
+    {0x90,0x90,0x90,0xEB,0x08,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90},
+    {0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90},
+                                             };
+const UINT32 PWRMGMT_PATCHED_STRINGS_COUNT = 
+    sizeof(PWRMGMT_PATCHED_STRINGS)/sizeof(PWRMGMT_PATCHED_STRINGS[0]);
 const UINT8 CPUPEI_PATCH_STRING[] =      {0x80,0x00,0x18,0xEB,
                                           0x05,0x0D,0x00,0x80};
 const UINT8 CPUPEI_PATCHED_STRING[] =    {0x00,0x00,0x18,0xEB,
@@ -120,10 +123,12 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
     UINT32 decompressed_size;
     UINT32 scratch_size;
     UINT32 grow;
+    UINT32 current_patch;
+    BOOLEAN patched;
     UINT8 module_size_bytes[3];
     UINT8 module_checksum;
     UINT8 header_checksum;
-
+    
     /* Reading module size */
     if(!module  || !error_code || !size2int(module + MODULE_SIZE_OFFSET, &module_size))
     {
@@ -166,46 +171,71 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
         goto error;
     }
     
-	/* Patching */
-    memcpy(string, PWRMGMT_PATCHED_STRING, sizeof(PWRMGMT_PATCHED_STRING));
-    
-    /* Determining buffer size for module compression */
-    scratch_size = 0;
-    if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_BUFFER_TOO_SMALL)
+    /* Trying differen parches to match new module size with bios structure */
+    for(current_patch = 0; current_patch < PWRMGMT_PATCHED_STRINGS_COUNT; current_patch++)
     {
-        *error_code = 6;
-        goto error;
-    }
-    
-    /* Reallocating buffer */
-    scratch = (UINT8*)realloc(scratch, scratch_size);
+	    patched = FALSE;
 
-    /* Compressing modified module */
-    if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_SUCCESS)
-    {
-        *error_code = 7;
-        goto error;
+        /* Patching */
+        memcpy(string, PWRMGMT_PATCHED_STRINGS[current_patch], sizeof(PWRMGMT_PATCHED_STRINGS[current_patch]));
+    
+        /* Determining buffer size for module compression */
+        scratch_size = 0;
+        if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_BUFFER_TOO_SMALL)
+        {
+            *error_code = 6;
+            goto error;
+        }
+    
+        /* Reallocating buffer */
+        scratch = (UINT8*)realloc(scratch, scratch_size);
+
+        /* Compressing modified module */
+        if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_SUCCESS)
+        {
+            *error_code = 7;
+            goto error;
+        }
+
+        /* Checking size */
+        if (data_size < scratch_size)
+        {
+            BOOLEAN fits = TRUE;
+            
+            grow = scratch_size - data_size;
+            end = module + PWRMGMT_DATA_OFFSET + data_size;
+            /* Checking that there is free space after the module */
+            while(grow--)
+                if(*end-- != 0xFF)
+                    fits = FALSE;
+            /* Trying different patch */
+            if(!fits)
+                continue;
+        }
+        else if (data_size > scratch_size)
+        {
+            UINT8 freespace_length;
+
+            grow = data_size - scratch_size;
+            end = module + PWRMGMT_DATA_OFFSET + data_size - 1;
+            while(grow--)
+                *end-- = 0xFF;
+            /* Checking that there is not too much space after modified module */
+            *end++;
+            for(freespace_length = 0; *end++ == 0xFF; freespace_length++);
+            /* Trying different patch */
+            if(freespace_length >= 8)
+                continue;
+        }
+
+        patched = TRUE;
+        break;
     }
 
-    /* Checking size */
-    if (data_size < scratch_size)
+    if(!patched)
     {
-        grow = scratch_size - data_size;
-        end = module + PWRMGMT_DATA_OFFSET + data_size;
-        /* Checking that there is free space after the module */
-        while(grow--)
-            if(*end-- != 0xFF)
-            {
-                *error_code = 8;
-                goto error;
-            }
-    }
-    else if (data_size > scratch_size)
-    {
-        grow = data_size - scratch_size;
-        end = module + PWRMGMT_DATA_OFFSET + data_size - 1;
-        while(grow--)
-            *end-- = 0xFF; 
+        *error_code = 8;
+        goto error;
     }
 
     /* Writing new module sizes */
