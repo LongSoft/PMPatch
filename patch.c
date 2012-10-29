@@ -205,7 +205,7 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
         goto error;
     }
     
-    /* Trying different patches to fit new module */
+    /* Trying different patches to fit in new module */
     for(current_patch = 0; current_patch < PWRMGMT_PATCHED_STRINGS_COUNT; current_patch++)
     {
 	    patched = FALSE;
@@ -257,12 +257,12 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
                 if(LzmaCompress(decompressed, decompressed_size, scratch, &scratch_size, dict_size, level) == EFI_SUCCESS)
                 {
                     grow = data_size > scratch_size ? data_size - scratch_size : scratch_size - data_size;
-                    if(grow < 8 || -grow < 8)
+                    if(grow < 8)
                         break;
                 }
         }
         
-        /* Writing decompressed data to file */
+        /* Writing recompressed data to file */
         /*file = fopen("repacked.bin", "wb");
         fwrite(scratch, 1, scratch_size, file);
         fclose(file);*/

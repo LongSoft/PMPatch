@@ -18,4 +18,5 @@ HEADERS += \
     Tiano/TianoCompress.h \
     Tiano/TianoDecompress.h \ 
     LZMA/LzmaCompress.h \
-    LZMA/LzmaDecompress.h
+    LZMA/LzmaDecompress.h \
+    LZMA/UefiLzma.h
