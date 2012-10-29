@@ -18,6 +18,12 @@ const UINT8 PWRMGMT_PATCH_STRING[] =     {0x80,0xFB,0x01,
                                           0x89,0x44,0x24,0x30};
 const UINT8 PWRMGMT_PATCHED_STRINGS[][13] =  {
     {0x80,0xFB,0x01,0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30},
+    {0x80,0xFB,0x01,0xEB,0x08,0x90,0x90,0x90,0x90,0x89,0x44,0x24,0x30},
+    {0x80,0xFB,0x01,0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x90,0x90,0x90,0x90},
+    {0x80,0xFB,0x01,0xEB,0x08,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90},
+    {0x90,0x90,0x90,0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30},
+    {0x90,0x90,0x90,0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x90,0x90,0x90,0x90},
+    {0x90,0x90,0x90,0xEB,0x08,0x90,0x90,0x90,0x90,0x89,0x44,0x24,0x30},
     {0x90,0x90,0x90,0xEB,0x08,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90},
     {0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90,0x90},
                                              };
@@ -113,6 +119,8 @@ int size2int(UINT8* module_size, UINT32* size)
 
 int patch_powermanagement_module(UINT8* module, UINT8* error_code)
 {
+    FILE* file;
+
     UINT32 module_size;
     UINT32 data_size;
     UINT8* data;
@@ -128,7 +136,8 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
     UINT8 module_size_bytes[3];
     UINT8 module_checksum;
     UINT8 header_checksum;
-    
+    UINT8 algorithm;
+
     /* Reading module size */
     if(!module  || !error_code || !size2int(module + MODULE_SIZE_OFFSET, &module_size))
     {
@@ -141,7 +150,7 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
     data_size = module_size - PWRMGMT_DATA_OFFSET;
 
     /* Checking file compression and receiving buffers sizes */
-    if(!EfiGetInfo(data, data_size, &decompressed_size, &scratch_size) == EFI_SUCCESS)
+    if(TianoGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS)
     {
         *error_code = 2;
         return 0;
@@ -156,13 +165,38 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
         goto error;
     }
     
-    /* Trying to unpack module */
+    /* Writing compressed data to file */
+    /*file = fopen("packed.bin", "wb");
+    fwrite(data, 1, data_size, file);
+    fclose(file);*/
+    
+    /* Trying to unpack module using Tiano decompression algorithm */
+    algorithm = ALG_TIANO;
     if(TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != EFI_SUCCESS)
     {
-        *error_code = 4;
-        goto error;
+        /* Trying to unpack module using LZMA decompression algorithm*/
+        if(LzmaGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS)
+        {
+            *error_code = 2;
+            goto error;
+        }
+
+        decompressed = (UINT8*)realloc(decompressed, decompressed_size);
+        scratch = (UINT8*)realloc(scratch, scratch_size);
+
+        algorithm = ALG_LZMA;
+        if(LzmaDecompress(data, data_size, decompressed, scratch) != EFI_SUCCESS)
+        {
+            *error_code = 4;
+            goto error;
+        }
     }
     
+    /* Writing decompressed data to file */
+    /*file = fopen("unpacked.bin", "wb");
+    fwrite(decompressed, 1, decompressed_size, file);
+    fclose(file);*/
+
     /*Searching for byte string to patch */
     string = find_pattern(decompressed, decompressed_size, PWRMGMT_PATCH_STRING, sizeof(PWRMGMT_PATCH_STRING));
     if(!string)
@@ -171,7 +205,7 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
         goto error;
     }
     
-    /* Trying differen parches to match new module size with bios structure */
+    /* Trying different patches to fit new module */
     for(current_patch = 0; current_patch < PWRMGMT_PATCHED_STRINGS_COUNT; current_patch++)
     {
 	    patched = FALSE;
@@ -179,23 +213,59 @@ int patch_powermanagement_module(UINT8* module, UINT8* error_code)
         /* Patching */
         memcpy(string, PWRMGMT_PATCHED_STRINGS[current_patch], sizeof(PWRMGMT_PATCHED_STRINGS[current_patch]));
     
-        /* Determining buffer size for module compression */
+        /* Compressing module */
         scratch_size = 0;
-        if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_BUFFER_TOO_SMALL)
+        if(algorithm == ALG_TIANO)
         {
-            *error_code = 6;
-            goto error;
-        }
+            /* Determining buffer size for module compression */
+            if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_BUFFER_TOO_SMALL)
+            {
+                *error_code = 6;
+                goto error;
+            }
     
-        /* Reallocating buffer */
-        scratch = (UINT8*)realloc(scratch, scratch_size);
+            /* Reallocating buffer */
+            scratch = (UINT8*)realloc(scratch, scratch_size);
 
-        /* Compressing modified module */
-        if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_SUCCESS)
-        {
-            *error_code = 7;
-            goto error;
+            /* Compressing modified module */
+            if(TianoCompress(decompressed, decompressed_size, scratch, &scratch_size) != EFI_SUCCESS)
+            {
+                *error_code = 7;
+                goto error;
+            }
         }
+        else if(algorithm == ALG_LZMA)
+        {
+            UINT32 dict_size;
+            UINT8 level;
+
+            /* Determining buffer size for module compression */
+            if(LzmaCompress(decompressed, decompressed_size, scratch, &scratch_size, 0, 0) != EFI_BUFFER_TOO_SMALL)
+            {
+                *error_code = 6;
+                goto error;
+            }
+    
+            /* Reallocating buffer */
+            scratch = (UINT8*)realloc(scratch, scratch_size);
+
+            /* Reading dictionary size */
+            size2int(data + 1, &dict_size);
+
+            /* Trying different compression levels */
+            for(level = 5; level < 10; level++)
+                if(LzmaCompress(decompressed, decompressed_size, scratch, &scratch_size, dict_size, level) == EFI_SUCCESS)
+                {
+                    grow = data_size > scratch_size ? data_size - scratch_size : scratch_size - data_size;
+                    if(grow < 8 || -grow < 8)
+                        break;
+                }
+        }
+        
+        /* Writing decompressed data to file */
+        /*file = fopen("repacked.bin", "wb");
+        fwrite(scratch, 1, scratch_size, file);
+        fclose(file);*/
 
         /* Checking size */
         if (data_size < scratch_size)

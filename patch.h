@@ -3,8 +3,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "EDK2/Compress.h"
-#include "EDK2/Decompress.h"
+#include "Tiano/TianoCompress.h"
+#include "Tiano/TianoDecompress.h"
+#include "LZMA/LzmaCompress.h"
+#include "LZMA/LzmaDecompress.h"
+
+/* Compression algorithms */
+#define ALG_TIANO 1
+#define ALG_LZMA  2
 
 /* Module UUIDs */
 extern const UINT8 PWRMGMT_UUID[];
