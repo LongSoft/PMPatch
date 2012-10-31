@@ -1,5 +1,4 @@
-/** @file
-  Processor or Compiler specific defines and types for x64.
+/* Processor or Compiler specific defines and types.
 
   Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 
@@ -13,7 +12,7 @@
 
   File Name:  ProcessorBind.h
 
-**/
+*/
 
 #ifndef __PROCESSOR_BIND_H__
 #define __PROCESSOR_BIND_H__

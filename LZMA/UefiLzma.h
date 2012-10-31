@@ -1,5 +1,4 @@
-/** @file
-  LZMA UEFI header file
+/* LZMA UEFI header file
 
   Allows LZMA code to build under UEFI (edk2) build environment
 
@@ -12,7 +11,7 @@
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
-**/
+*/
 
 #ifndef __UEFILZMA_H__
 #define __UEFILZMA_H__
@@ -36,9 +35,6 @@ typedef unsigned int size_t;
 #ifndef _PTRDIFF_T_DEFINED
 typedef int ptrdiff_t;
 #endif
-
-#define memcpy CopyMem
-#define memmove CopyMem
 
 #define _LZMA_SIZE_OPT
 

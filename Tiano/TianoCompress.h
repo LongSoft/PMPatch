@@ -1,4 +1,4 @@
-/** @file
+/* Tiano Compress Header
 
 Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials                          
@@ -17,7 +17,7 @@ Abstract:
 
   Header file for compression routine.
   
-**/
+*/
 
 #ifndef _TIANOCOMPRESS_H_
 #define _TIANOCOMPRESS_H_
@@ -32,6 +32,22 @@ Abstract:
 Routine Description:
 
   Tiano compression routine.
+
+Arguments:
+
+  SrcBuffer   - The buffer storing the source data
+  SrcSize     - The size of source data
+  DstBuffer   - The buffer to store the compressed data
+  DstSize     - On input, the size of DstBuffer; On output,
+                the size of the actual compressed data.
+
+Returns:
+
+  EFI_BUFFER_TOO_SMALL  - The DstBuffer is too small. In this case,
+                          DstSize contains the size needed.
+  EFI_SUCCESS           - Compression is successful.
+  EFI_OUT_OF_RESOURCES  - No resource to complete function.
+  EFI_INVALID_PARAMETER - Parameter supplied is wrong.
 
 --*/
 EFI_STATUS

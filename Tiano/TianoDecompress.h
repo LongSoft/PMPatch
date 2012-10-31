@@ -1,4 +1,4 @@
-/** @file
+/* Tiano Decompress Header
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials                          
@@ -17,7 +17,7 @@ Abstract:
 
   Header file for compression routine
   
-**/
+*/
 
 #ifndef _TIANODECOMPRESS_H
 #define _TIANODECOMPRESS_H
@@ -31,7 +31,7 @@ TianoGetInfo (
   OUT     UINT32  *DstSize,
   OUT     UINT32  *ScratchSize
   );
-/**
+/*
 
 Routine Description:
 
@@ -49,7 +49,7 @@ Returns:
   EFI_SUCCESS           - The size of destination buffer and the size of scratch buffer are successull retrieved.
   EFI_INVALID_PARAMETER - The source data is corrupted
 
-**/
+*/
 
 EFI_STATUS
 TianoDecompress (
@@ -60,7 +60,7 @@ TianoDecompress (
   IN OUT  VOID    *Scratch,
   IN      UINT32  ScratchSize
   );
-/**
+/*
 
 Routine Description:
 
@@ -80,5 +80,5 @@ Returns:
   EFI_SUCCESS           - Decompression is successfull
   EFI_INVALID_PARAMETER - The source data is corrupted
 
-**/
+*/
 #endif

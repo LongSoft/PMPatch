@@ -1,4 +1,4 @@
-/** @file
+/* Tiano Decompress Implementation
 
 Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials
@@ -216,7 +216,7 @@ Returns:
   }
 
   if (Start[17] != 0) {
-    /*(1U << 16)*/
+    //(1U << 16)
     return (UINT16) BAD_TABLE;
   }
 

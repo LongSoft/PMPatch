@@ -1,5 +1,4 @@
-/** @file
-  LZMA Decompress interfaces
+/* LZMA Decompress Implementation
 
   Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
@@ -10,7 +9,7 @@
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
-**/
+*/
 
 #include "LzmaDecompress.h"
 #include "Sdk/C/Types.h"
@@ -35,14 +34,14 @@ typedef struct
   UINTN    BufferSize;
 } ISzAllocWithData;
 
-/**
+/*
   Allocation routine used by LZMA decompression.
 
   @param P                Pointer to the ISzAlloc instance
   @param Size             The size in bytes to be allocated
 
   @return The allocated pointer address, or NULL on failure
-**/
+*/
 STATIC 
 VOID *
 SzAlloc (
@@ -66,12 +65,12 @@ SzAlloc (
   }
 }
 
-/**
+/*
   Free routine used by LZMA decompression.
 
   @param P                Pointer to the ISzAlloc instance
   @param Address          The address to be freed
-**/
+*/
 STATIC 
 VOID
 SzFree (
@@ -88,13 +87,13 @@ SzFree (
 
 #define LZMA_HEADER_SIZE (LZMA_PROPS_SIZE + 8)
 
-/**
+/*
   Get the size of the uncompressed buffer by parsing EncodeData header.
 
   @param EncodedData  Pointer to the compressed data.
 
   @return The size of the uncompressed buffer.
-**/
+*/
 UINT64
 GetDecodedSizeOfBuf(
   UINT8 *EncodedData
@@ -103,7 +102,7 @@ GetDecodedSizeOfBuf(
   UINT64 DecodedSize;
   INTN   Index;
 
-  /* Parse header */
+  // Parse header 
   DecodedSize = 0;
   for (Index = LZMA_PROPS_SIZE + 7; Index >= LZMA_PROPS_SIZE; Index--)
     DecodedSize = LShiftU64(DecodedSize, 8) + EncodedData[Index];
@@ -115,7 +114,7 @@ GetDecodedSizeOfBuf(
 // LZMA functions and data as defined in local LzmaDecompressLibInternal.h
 //
 
-/**
+/*
   Given a Lzma compressed source buffer, this function retrieves the size of 
   the uncompressed buffer and the size of the scratch buffer required 
   to decompress the compressed source buffer.
@@ -144,7 +143,7 @@ GetDecodedSizeOfBuf(
                           in DestinationSize and the size of the scratch 
                           buffer was returned in ScratchSize.
 
-**/
+*/
 RETURN_STATUS
 EFIAPI
 LzmaGetInfo (
@@ -165,7 +164,7 @@ LzmaGetInfo (
   return RETURN_SUCCESS;
 }
 
-/**
+/*
   Decompresses a Lzma compressed source buffer.
 
   Extracts decompressed data to its original form.
@@ -186,7 +185,7 @@ LzmaGetInfo (
   @retval  RETURN_INVALID_PARAMETER 
                           The source buffer specified by Source is corrupted 
                           (not in a valid compressed format).
-**/
+*/
 RETURN_STATUS
 EFIAPI
 LzmaDecompress (

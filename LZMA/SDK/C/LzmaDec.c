@@ -1,28 +1,9 @@
-/** @file
-  LzmaDec.c
-
-  Based on LZMA SDK 4.65:
-    LzmaDec.c -- LZMA Decoder
-    2008-11-06 : Igor Pavlov : Public domain
-
-  Copyright (c) 2009, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-
-**/
+/* LzmaDec.c -- LZMA Decoder
+2008-11-06 : Igor Pavlov : Public domain */
 
 #include "LzmaDec.h"
 
-#ifndef EFIAPI
-
 #include <string.h>
-
-#endif // !EFIAPI
 
 #define kNumTopBits 24
 #define kTopValue ((UInt32)1 << kNumTopBits)
@@ -285,14 +266,14 @@ static int MY_FAST_CALL LzmaDec_DecodeReal(CLzmaDec *p, SizeT limit, const Byte 
         prob = probs + RepLenCoder;
       }
       {
-        unsigned limit2, offset;
+        unsigned limit, offset;
         CLzmaProb *probLen = prob + LenChoice;
         IF_BIT_0(probLen)
         {
           UPDATE_0(probLen);
           probLen = prob + LenLow + (posState << kLenNumLowBits);
           offset = 0;
-          limit2 = (1 << kLenNumLowBits);
+          limit = (1 << kLenNumLowBits);
         }
         else
         {
@@ -303,17 +284,17 @@ static int MY_FAST_CALL LzmaDec_DecodeReal(CLzmaDec *p, SizeT limit, const Byte 
             UPDATE_0(probLen);
             probLen = prob + LenMid + (posState << kLenNumMidBits);
             offset = kLenNumLowSymbols;
-            limit2 = (1 << kLenNumMidBits);
+            limit = (1 << kLenNumMidBits);
           }
           else
           {
             UPDATE_1(probLen);
             probLen = prob + LenHigh;
             offset = kLenNumLowSymbols + kLenNumMidSymbols;
-            limit2 = (1 << kLenNumHighBits);
+            limit = (1 << kLenNumHighBits);
           }
         }
-        TREE_DECODE(probLen, limit2, len);
+        TREE_DECODE(probLen, limit, len);
         len += offset;
       }
 
@@ -419,7 +400,7 @@ static int MY_FAST_CALL LzmaDec_DecodeReal(CLzmaDec *p, SizeT limit, const Byte 
           const Byte *lim = dest + curLen;
           dicPos += curLen;
           do
-            *((volatile Byte *)dest) = (Byte)*(dest + src);
+            *(dest) = (Byte)*(dest + src);
           while (++dest != lim);
         }
         else
@@ -700,6 +681,7 @@ static ELzmaDummy LzmaDec_TryDummy(const CLzmaDec *p, const Byte *buf, SizeT inS
   NORMALIZE_CHECK;
   return res;
 }
+
 
 static void LzmaDec_InitRc(CLzmaDec *p, const Byte *data)
 {
@@ -1023,4 +1005,3 @@ SRes LzmaDecode(Byte *dest, SizeT *destLen, const Byte *src, SizeT *srcLen,
   LzmaDec_FreeProbs(&p, alloc);
   return res;
 }
-

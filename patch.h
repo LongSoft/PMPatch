@@ -1,69 +1,76 @@
+/* Patch Header 
+
+  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.<BR>
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+*/
+
 #ifndef __PATCH_H__
 #define __PATCH_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "Tiano/TianoCompress.h"
-#include "Tiano/TianoDecompress.h"
-#include "LZMA/LzmaCompress.h"
-#include "LZMA/LzmaDecompress.h"
+#include "Common/UefiBaseTypes.h"
 
-/* Compression algorithms */
-#define ALG_TIANO 1
-#define ALG_LZMA  2
+#define UUID_LENGTH 16
 
-/* Module UUIDs */
-extern const UINT8 PWRMGMT_UUID[];
-extern const UINT8 CPUPEI_UUID[];
-extern const UINT8 VOLUME_TOP_UUID[];
+// Data structures 
+// Common UEFI module header 
+#pragma pack(push, 1)
+typedef struct {
+    UINT8 guid[UUID_LENGTH];
+    UINT8 header_checksum;
+    UINT8 data_checksum;
+    UINT8 type;
+    UINT8 atributes;
+    UINT8 size[3];
+    UINT8 state;
+} module_header;
 
-/* Patch strings */
-extern const UINT8 PWRMGMT_PATCH_STRING[];
-extern const UINT8 CPUPEI_PATCH_STRING[];
-extern const UINT8 PWRMGMT_PATCHED_STRINGS[][13];
-extern const UINT32 PWRMGMT_PATCHED_STRINGS_COUNT;
-extern const UINT8 CPUPEI_PATCHED_STRING[];
+// Compressed section type for nested module (Asrock BIOSes) 
+#define SECTION_COMPRESSED  0x01
+// DXE driver section type for PowerManagement module 
+#define SECTION_DXE_DEPEX   0x13
+// Common section header 
+typedef struct {
+    UINT8 size[3];
+    UINT8 type;
+} common_section_header;
 
-/* Data offsets and sizes*/
-/* Common */
-#define MODULE_UUID_LENGTH                16
-#define MODULE_STATE_OFFSET               23
-#define MODULE_SIZE_OFFSET                20
-#define MODULE_HEADER_CHECKSUM_OFFSET     16
-#define MODULE_DATA_CHECKSUM_OFFSET       17
-#define MODULE_DATA_CHECKSUM_START        24
-/* PowerManagement */
-#define PWRMGMT_COMPRESSED_SIZE_OFFSET    172
-#define PWRMGMT_COMPRESSED_DATA_OFFSET    9
-#define PWRMGMT_DATA_OFFSET               181
+// Uncompressed data type 
+#define COMPRESSION_NONE 0x00
+// Tiano compressed data type 
+#define COMPRESSION_TIANO 0x01
+// LZMA compressed data type 
+#define COMPRESSION_LZMA  0x02
+// Compressed section header 
+typedef struct {
+    UINT8 size[3];
+    UINT8 type;
+    UINT32 decompressed_size;
+    UINT8 compression_type;
+} compressed_section_header;
+#pragma pack(pop)
 
-/* Error messages array for PowerManagement module patcher - index of that array is an error code */
-extern const UINT8* PATCH_PWRMGMT_ERROR_MESSAGES[];
-/* Error messages array for CpuPei module patcher - index of that array is an error code */
-extern const UINT8* PATCH_CPUPEI_ERROR_MESSAGES[];
+// Error codes 
+#define ERR_PATCHED                         0x00
+#define ERR_INVALID_ARGUMENT                0x01
+#define ERR_UNKNOWN_MODULE                  0x02
+#define ERR_DXE_SECTION_NOT_FOUND           0x03
+#define ERR_UNKNOWN_COMPRESSION_TYPE        0x04
+#define ERR_TIANO_DECOMPRESSION_FAILED      0x05
+#define ERR_LZMA_DECOMPRESSION_FAILED       0x06
+#define ERR_PATCH_STRING_NOT_FOUND          0x07
+#define ERR_TIANO_COMPRESSION_FAILED        0x08
+#define ERR_LZMA_COMPRESSION_FAILED         0x09
+#define ERR_PATCHED_MODULE_INSERTION_FAILED 0x0A
+#define ERR_MODULE_NOT_FOUND                0x0B
 
-/* Finds pattern in string */
-/* Returns pointer to the first symbol of found pattern, or NULL if not found */
-UINT8* find_pattern(UINT8* string, UINT32 slen, const UINT8* pattern, UINT32 plen);
+// Patches module 
+UINT8 patch_bios(UINT8* bios, UINT32 size);
 
-/* Calculates 2's complement 8-bit checksum of data from data[0] to data[length-1] and stores it to *checksum */
-/* Returns 1 on success or 0 on error */
-int calculate_checksum(UINT8* data, UINT32 length, UINT8* checksum);
-
-/* Converts UINT32 to 3 bytes in reversed order. */
-/* Returns 1 on success or 0 on error */
-int int2size(UINT32 size, UINT8* module_size);
-
-/* Converts 3 bytes in reversed order to UINT32. */
-/* Returns 1 on success or 0 on error */
-int size2int(UINT8* module_size, UINT32* size);
-
-/* Patches PowerManagement module */
-/* Returns 1 on success and sets *error_code to zero or 0 on error and sets *error_code to non-zero */
-int patch_powermanagement_module(UINT8* module, UINT8* error_code);
-
-/* Patches CpuPei module */
-/* Returns 1 on success and sets *error_code to zero or 0 on error and sets *error_code to non-zero */
-int patch_cpupei_module(UINT8* module, UINT8* error_code);
-
-#endif /* __PATCH_H__ */
+#endif // __PATCH_H__ 

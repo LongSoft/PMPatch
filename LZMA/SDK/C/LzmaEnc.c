@@ -1,4 +1,4 @@
-/** @file
+/** 
   Based on LZMA SDK 4.65:
     LzmaEnc.c -- LZMA Encoder
     2009-02-02 : Igor Pavlov : Public domain
@@ -15,13 +15,6 @@
 **/
 
 #include <string.h>
-
-/* #define SHOW_STAT */
-/* #define SHOW_STAT2 */
-
-#if defined(SHOW_STAT) || defined(SHOW_STAT2)
-#include <stdio.h>
-#endif
 
 #include "LzmaEnc.h"
 

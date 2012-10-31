@@ -1,15 +1,29 @@
+/* PMPatch
+
+  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.<BR>
+  This program and the accompanying materials
+  are licensed and made available under the terms and conditions of the BSD License
+  which accompanies this distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "patch.h"
 
-/* Return codes */
+// Return codes 
 #define ERR_OK                           0
 #define ERR_ARGS                         1
 #define ERR_INPUT_FILE                   2
 #define ERR_OUTPUT_FILE                  3
 #define ERR_MEMORY                       4
 #define ERR_NO_MODULE                    5
+#define ERR_PATCH                        6
 
 int main(int argc, char* argv[])
 {
@@ -19,15 +33,12 @@ int main(int argc, char* argv[])
     UINT8* buffer;
     INT32 filesize;
     INT32 read;
-    UINT8* rest;
-    INT32 rest_size;
-    UINT8* module;
-    UINT32 module_counter;
-    UINT8 error_code;
+    UINT8 patch_result;
 
+    printf("PMPatch 0.5.0\n");
     if(argc < 3)
     {
-        printf("PMPatch v0.4.1\nThis program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("This program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }
@@ -35,7 +46,7 @@ int main(int argc, char* argv[])
     inputfile = argv[1];
     outputfile = argv[2];
 
-     /* Opening input file */
+    // Opening input file 
     file = fopen(inputfile, "rb");
     if (!file)
     {
@@ -43,12 +54,12 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
 
-    /* Determining file size */
+    // Determining file size 
     fseek(file, 0, SEEK_END);
     filesize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    /* Allocating memory for buffer */
+    // Allocating memory for buffer 
     buffer = (UINT8*)malloc(filesize);
     if (!buffer)
     {
@@ -56,7 +67,7 @@ int main(int argc, char* argv[])
         return ERR_MEMORY;
     }
 
-    /* Reading whole file to buffer */
+    // Reading whole file to buffer 
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
@@ -64,81 +75,31 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
 
-    /* Closing input file */
+    // Closing input file 
     fclose(file);
 
-    /* Searching for PowerManagement modules and patching them if found */
-    module_counter = 0;
-    rest = buffer;
-    rest_size = filesize;
-    do
-    {
-        module = find_pattern(rest, rest_size, PWRMGMT_UUID, MODULE_UUID_LENGTH);
-        if(module)
-        {
-            rest_size = filesize - (module - buffer);
-            rest = module + 1;
-            module_counter++;
+    // Patching BIOS 
+    patch_result = patch_bios(buffer, filesize);
+    if(patch_result)
+        return ERR_PATCH;
 
-            if(patch_powermanagement_module(module, &error_code))
-                printf("PowerManagement module at %08X patched.\n", module - buffer);
-            else
-                printf("PowerManagement module at %08X not patched.\n%s\n", module - buffer, PATCH_PWRMGMT_ERROR_MESSAGES[error_code]);
-        }
-    }
-    while(module);
-
-    if(!module_counter)
-    {
-        printf("PowerManagement module not found.\n");
-        
-        /* Searching for CpuPei modules and patching them if found */
-        module_counter = 0;
-        rest = buffer;
-        rest_size = filesize;
-        do
-        {
-            module = find_pattern(rest, rest_size, CPUPEI_UUID, MODULE_UUID_LENGTH);
-            if(module)
-            {
-                rest_size = filesize - (module - buffer);
-                rest = module + 1;
-                module_counter++;
-
-                if(patch_cpupei_module(module, &error_code))
-                    printf("CpuPei module at %08X patched.\n", module - buffer);
-                else
-                    printf("CpuPei module at %08X not patched.\n%s\n", module - buffer, PATCH_CPUPEI_ERROR_MESSAGES[error_code]);
-            }
-        }
-        while(module);
-
-        if(!module_counter)
-        {
-            printf("CpuPei module not found.\n");
-            return ERR_NO_MODULE;
-        }
-    }
-    
-    /* Creating output file*/
+    // Creating output file
     file = fopen(outputfile, "wb");
     if (!file)
     {
         perror("Can't create output file.\n");
         return ERR_OUTPUT_FILE;
     }
-    /* Writing modified BIOS file*/
+
+    // Writing modified BIOS file
     if(fwrite(buffer, sizeof(char), filesize, file) != filesize)
     {
         perror("Can't write output file.\n");
         return ERR_OUTPUT_FILE;
     }
 
-    /* Closing output file */
+    // Closing output file 
     fclose(file);
 
-    /* Freeing buffer */
-    free(buffer);
-    
     return ERR_OK;
 }

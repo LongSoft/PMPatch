@@ -1,4 +1,4 @@
-/** @file
+/* Tiano Compress Implementation
 
 Copyright (c) 2006 - 2008, Intel Corporation. All rights reserved.<BR>
 This program and the accompanying materials                          
@@ -21,7 +21,7 @@ Abstract:
   This sequence is further divided into Blocks and Huffman codings
   are applied to each Block.
 
-**/
+*/
 
 #include "TianoCompress.h"
 
@@ -524,7 +524,7 @@ Returns: (VOID)
 
   for (Index = WNDSIZ; Index <= WNDSIZ + UINT8_MAX; Index++) {
     mLevel[Index]     = 1;
-    mPosition[Index]  = NIL;  /* sentinel */
+    mPosition[Index]  = NIL;  // sentinel 
   }
 
   for (Index = WNDSIZ; Index < WNDSIZ * 2; Index++) {

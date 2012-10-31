@@ -1,5 +1,4 @@
-/** @file
-  LZMA Decompress Library internal header file declares Lzma decompress interfaces.
+/* LZMA Decompress Header
 
   Copyright (c) 2009 - 2010, Intel Corporation. All rights reserved.<BR>
   This program and the accompanying materials
@@ -10,7 +9,7 @@
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
-**/
+*/
 
 #ifndef __LZMADECOMPRESS_H__
 #define __LZMADECOMPRESS_H__
@@ -20,8 +19,7 @@
 #include <assert.h>
 #define ASSERT(x) assert(x)
 
-#define SIZE_64KB 0x00010000
-#define SCRATCH_BUFFER_REQUEST_SIZE SIZE_64KB
+#define SCRATCH_BUFFER_REQUEST_SIZE 0x00800000
 
 UINT64
 EFIAPI
@@ -30,7 +28,7 @@ LShiftU64 (
   IN      UINTN                     Count
   );
 
-/**
+/*
   Given a Lzma compressed source buffer, this function retrieves the size of 
   the uncompressed buffer and the size of the scratch buffer required 
   to decompress the compressed source buffer.
@@ -59,7 +57,7 @@ LShiftU64 (
                           in DestinationSize and the size of the scratch 
                           buffer was returned in ScratchSize.
 
-**/
+*/
 RETURN_STATUS
 EFIAPI
 LzmaGetInfo (
@@ -69,7 +67,7 @@ LzmaGetInfo (
   OUT UINT32      *ScratchSize
   );
 
-/**
+/*
   Decompresses a Lzma compressed source buffer.
 
   Extracts decompressed data to its original form.
@@ -90,7 +88,7 @@ LzmaGetInfo (
   @retval  RETURN_INVALID_PARAMETER 
                           The source buffer specified by Source is corrupted 
                           (not in a valid compressed format).
-**/
+*/
 RETURN_STATUS
 EFIAPI
 LzmaDecompress (

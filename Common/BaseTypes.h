@@ -1,5 +1,4 @@
-/** @file
-  Processor or Compiler specific defines for all supported processors.
+/* Processor or Compiler specific defines for all supported processors.
 
   This file is stand alone self consistent set of definitions. 
 
@@ -14,7 +13,7 @@
 
   File Name:  BaseTypes.h
 
-**/
+*/
 
 #ifndef __BASE_TYPES_H__
 #define __BASE_TYPES_H__
@@ -31,7 +30,6 @@
 #define CONST     const
 #define STATIC    static
 #define VOID      void
-
 //
 // Modifiers for Data Types used to self document code.
 // This concept is borrowed for UEFI specification.

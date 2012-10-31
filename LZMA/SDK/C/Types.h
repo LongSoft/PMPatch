@@ -1,36 +1,15 @@
-/** @file
-  Types.h
-
-  Based on LZMA SDK 4.65:
-    Types.h -- Basic types
-    2008-11-23 : Igor Pavlov : Public domain
-
-  Copyright (c) 2009, Intel Corporation. All rights reserved.<BR>
-  This program and the accompanying materials
-  are licensed and made available under the terms and conditions of the BSD License
-  which accompanies this distribution.  The full text of the license may be found at
-  http://opensource.org/licenses/bsd-license.php
-
-  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
-
-**/
+/* Types.h -- Basic types
+2008-11-23 : Igor Pavlov : Public domain */
 
 #ifndef __7Z_TYPES_H
 #define __7Z_TYPES_H
 
-#ifdef EFIAPI
-
-#include "UefiLzma.h"
-
-#else
+#include "../../UefiLzma.h"
 
 #include <stddef.h>
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
-
 #endif
 
 #define SZ_OK 0

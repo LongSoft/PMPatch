@@ -1,5 +1,4 @@
-/** @file
-  Defines data types and constants introduced in UEFI.
+/* Defines data types and constants introduced in UEFI.
 
   Copyright (c) 2006 - 2007, Intel Corporation. All rights reserved.<BR>
 
@@ -13,12 +12,17 @@
 
   File Name: UefiBaseTypes.h
 
-**/
+*/
 
 #ifndef __UEFI_BASETYPE_H__
 #define __UEFI_BASETYPE_H__
 
 #include "BaseTypes.h"
+
+#include <assert.h>
+#define ASSERT(x) assert(x)
+
+#define SCRATCH_BUFFER_REQUEST_SIZE 0x00800000
 
 //
 // Basical data type definitions introduced in UEFI.

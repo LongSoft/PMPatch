@@ -1,7 +1,6 @@
-/** @file
-  LZMA Compress interfaces
+/* LZMA Compress Implementation
 
-  Copyright (c) 2012, CodeRush. All rights reserved.<BR>
+  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.<BR>
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -10,7 +9,7 @@
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
   WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
-**/
+*/
 
 #include "LzmaCompress.h"
 #include "Sdk/C/Types.h"
@@ -66,7 +65,6 @@ LzmaCompress (
   IN UINTN       SourceSize,
   IN OUT VOID    *Destination,
   IN OUT UINTN   *DestinationSize,
-  IN UINTN       DictSize,
   IN UINT8       CompressionLevel
   )
 {
@@ -82,7 +80,7 @@ LzmaCompress (
     }
         
     LzmaEncProps_Init(&props);
-    props.dictSize = DictSize;
+    props.dictSize = LZMA_DICTIONARY_SIZE;
     props.level = CompressionLevel;
 
     LzmaResult = LzmaEncode(
