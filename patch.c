@@ -34,6 +34,8 @@ CONST UINT8 CPUPEI_UUID[] =
 {0xA9,0xAF,0xB5,0x2B,0x33,0xFF,0x7B,0x41,0x84,0x97,0xCB,0x77,0x3C,0x2B,0x93,0xBF};
 CONST UINT8 PLATFORMSETUPADVANCED_UUID[] =
 {0xC4,0x94,0xEF,0xCF,0x67,0x41,0x6A,0x46,0x88,0x93,0x87,0x79,0x45,0x9D,0xFA,0x86};
+CONST UINT8 DELL_RAW_FILE_GUID[] =
+{0x7F,0x36,0x3E,0xF3,0xD2,0x41,0x01,0x42,0x9C,0xB7,0xAF,0xA6,0x3D,0xCC,0xEE,0xC9};
 
 // PowerManagement patch 
 CONST UINT8 POWERMANAGEMENT_PATCH_PATTERN[] =
@@ -125,6 +127,25 @@ UINT32 size2int(UINT8* module_size)
     return (module_size[2] << 16) + 
         (module_size[1] << 8)  + 
         module_size[0];
+}
+
+UINT8 correct_checksums(UINT8* module)
+{
+    UINT8* string;
+    module_header *header;
+
+    if(!module)
+        return ERR_INVALID_ARGUMENT;
+
+    header = (module_header*) module;
+
+    // Calculating new module checksums 
+    header->header_checksum = 0;
+    header->data_checksum = 0;
+    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
+    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
+
+    return ERR_PATCHED;
 }
 
 UINT8 patch_powermanagement_module(UINT8* module)
@@ -291,13 +312,9 @@ UINT8 patch_powermanagement_module(UINT8* module)
         module_size_change = compressed_size - data_size; 
         int2size(size2int(header->size) + module_size_change, header->size);
     }
-    // Calculating new module checksums 
-    header->header_checksum = 0;
-    header->data_checksum = 0;
-    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
-    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
 
-    return ERR_PATCHED;
+    // Correcting checksums
+    return correct_checksums(module);
 }
 
 UINT8 patch_powermanagement2_module(UINT8* module)
@@ -328,14 +345,8 @@ UINT8 patch_powermanagement2_module(UINT8* module)
     // Patching
     memcpy(string, POWERMANAGEMENT_PATCHED_PATTERNS[0], sizeof(POWERMANAGEMENT_PATCH_PATTERN));
 
-    // Calculating new module checksums 
-    header->header_checksum = 0;
-    header->data_checksum = 0;
-    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
-    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
-
-    // Patch complete 
-    return ERR_PATCHED;    
+    // Correcting checksums
+    return correct_checksums(module);  
 }
 
 UINT8 patch_platformsetupadvanced_module(UINT8* module)
@@ -382,14 +393,8 @@ UINT8 patch_platformsetupadvanced_module(UINT8* module)
     if(!is_found)
         return ERR_PATCH_STRING_NOT_FOUND;
     
-    // Calculating new module checksums 
-    header->header_checksum = 0;
-    header->data_checksum = 0;
-    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
-    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
-
-    // Patch complete 
-    return ERR_PATCHED;    
+    // Correcting checksums
+    return correct_checksums(module);  
 }
 
 UINT8 patch_cpupei_module(UINT8* module)
@@ -410,14 +415,8 @@ UINT8 patch_cpupei_module(UINT8* module)
     // Patching
     memcpy(string, CPUPEI_PATCHED_PATTERN, sizeof(CPUPEI_PATCH_PATTERN));
 
-    // Calculating new module checksums 
-    header->header_checksum = 0;
-    header->data_checksum = 0;
-    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
-    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
-
-    // Patch complete 
-    return ERR_PATCHED;
+    // Correcting checksums
+    return correct_checksums(module);
 }
 
 UINT8 patch_nested_module(UINT8* module)
@@ -435,12 +434,20 @@ UINT8 patch_nested_module(UINT8* module)
     UINT8* string;
     INT32 module_size_change;
     UINT8 result;
+    FILE *file;
+
 
     if(!module)
         return ERR_INVALID_ARGUMENT;
 
     header = (module_header*) module;
     data = module + sizeof(module_header);
+    
+    // Writing file "packed.rom"
+    file = fopen("packed.rom", "wb");
+    if(file)
+        fwrite(module, sizeof(INT8), size2int(header->size), file); 
+    
     compressed_header = (compressed_section_header*) data;
     if(compressed_header->type != SECTION_COMPRESSED)
         return ERR_UNKNOWN_MODULE;
@@ -483,6 +490,11 @@ UINT8 patch_nested_module(UINT8* module)
         return ERR_UNKNOWN_COMPRESSION_TYPE;
     }
 
+    // Writing file "unpacked.rom"
+    file = fopen("unpacked.rom", "wb");
+    if(file)
+        fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
+    
     // Searching for PowerManagement modules 
     if (string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_UUID, UUID_LENGTH))
     {
@@ -508,6 +520,11 @@ UINT8 patch_nested_module(UINT8* module)
         if (!result)
             printf("Nested PlatformSetupAdvancedDxe.efi at %08X patched.\n", string - module);
     }
+    
+    // Writing file "patched.rom"
+    file = fopen("patched.rom", "wb");
+    if(file)
+        fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
 
     // Compressing patched module 
     switch(compressed_header->compression_type)
@@ -570,12 +587,18 @@ UINT8 patch_nested_module(UINT8* module)
     header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
     header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
 
+    // Writing file "repacked.rom"
+    file = fopen("repacked.rom", "wb");
+    if(file)
+        fwrite(module, sizeof(INT8), size2int(header->size), file); 
+
     return ERR_PATCHED;
 }
 
 UINT8 patch_bios(UINT8* bios, UINT32 size)
 {
     UINT8* module;
+    UINT8* raw_file;
     UINT8* bios_end;
     UINT8 patch_result;
     BOOLEAN is_found;
@@ -701,6 +724,12 @@ UINT8 patch_bios(UINT8* bios, UINT32 size)
         if (!patch_result)
         {
             printf("Nested PowerManagement2.efi module at %08X patched.\n", module - bios);
+            
+            // Fixing RAW file checksum in Dell BIOSes
+            raw_file = find_pattern(bios, size, DELL_RAW_FILE_GUID, UUID_LENGTH);
+            if(raw_file)
+                if(!correct_checksums(raw_file))
+                    printf("Dell RAW file checksums corrected.\n");
             continue;
         }
 
@@ -738,7 +767,6 @@ UINT8 patch_bios(UINT8* bios, UINT32 size)
             printf("Unknown error.\n");
             break;
         }
-
     }
     if (!is_found)
         printf("Nested PowerManagement2.efi module not found.\n"); 
