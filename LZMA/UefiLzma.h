@@ -22,26 +22,10 @@
 #undef _WIN32
 #endif
 
-<<<<<<< HEAD
-/*#ifndef _SIZE_T_DEFINED
-#if !defined(_WIN64) || defined(__GNUC__)
-typedef unsigned int size_t;
-#endif
-#endif*/
-
-=======
->>>>>>> Version 0.5.3.2
 #ifdef _WIN64
 #undef _WIN64
 #endif
 
-<<<<<<< HEAD
-/*#ifndef _PTRDIFF_T_DEFINED
-typedef int ptrdiff_t;
-#endif*/
-
-=======
->>>>>>> Version 0.5.3.2
 #define _LZMA_SIZE_OPT
 
 #endif // __UEFILZMA_H__
