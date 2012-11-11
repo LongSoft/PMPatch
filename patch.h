@@ -19,20 +19,6 @@
 #define UUID_LENGTH 16
 
 // Data structures 
-// UEFI firmware volume header
-typedef struct {
-  UINT8 zeros[16];
-  UINT8 guid[16];
-  UINT64 length;
-  UINT32 signature;
-  UINT32 attributes;
-  UINT16 header_length;
-  UINT16 checksum;
-  UINT16 ext_header_offset;
-  UINT8  reserved[1];
-  UINT8  revision;
-} firmware_volume_header;
-
 // Common UEFI module header 
 #pragma pack(push, 1)
 typedef struct {

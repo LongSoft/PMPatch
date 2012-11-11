@@ -40,7 +40,9 @@ CONST UINT8 DELL_RAW_FILE_GUID[] =
 // PowerManagement patch 
 CONST UINT8 POWERMANAGEMENT_PATCH_PATTERN[] =
 {0x75,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30};
-CONST UINT8 POWERMANAGEMENT_PATCHED_PATTERNS[][13] =  {
+CONST UINT8 POWERMANAGEMENT_PATCH_PATTERN_80FB01[] =
+{0x80,0xFB,0x01,0x75,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30};
+CONST UINT8 POWERMANAGEMENT_PATCHED_PATTERNS[][10] =  {
     {0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x89,0x44,0x24,0x30},
     {0xEB,0x08,0x0F,0xBA,0xE8,0x0F,0x90,0x90,0x90,0x90},
     {0xEB,0x08,0x90,0x90,0x90,0x90,0x89,0x44,0x24,0x30},
@@ -56,7 +58,7 @@ CONST UINT8 CPUPEI_PATCH_PATTERN[] =
 CONST UINT8 CPUPEI_PATCHED_PATTERN[] =    
 {0x00,0x00,0x18,0xEB,0x05,0x0D,0x00,0x00};
 
-// Phoenix PlatformSetupAdvancedDxe patch to unclock additional BIOS settings
+// Phoenix PlatformSetupAdvancedDxe patch to unlock additional BIOS settings
 CONST UINT8 PLATFORMSETUPADVANCED_PATCH_PATTERN[] =
 {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x45,0x0A};
 CONST UINT8 PLATFORMSETUPADVANCED_PATCHED_PATTERN[] =
@@ -131,7 +133,6 @@ UINT32 size2int(UINT8* module_size)
 
 UINT8 correct_checksums(UINT8* module)
 {
-    UINT8* string;
     module_header *header;
 
     if(!module)
@@ -221,8 +222,17 @@ UINT8 patch_powermanagement_module(UINT8* module)
         return ERR_UNKNOWN_COMPRESSION_TYPE;
     }
 
-    // Searching for patch string 
-    string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_PATCH_PATTERN, sizeof(POWERMANAGEMENT_PATCH_PATTERN));
+    // Searching for specific patch patterns first 
+    string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_PATCH_PATTERN_80FB01, sizeof(POWERMANAGEMENT_PATCH_PATTERN_80FB01));
+    if(string)
+    {
+        // Patching first 3 bytes with 0x90
+        memset(string, 0x90, 3);
+        string += 3;
+    }
+    else
+        // Searching for generic patch pattern
+        string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_PATCH_PATTERN, sizeof(POWERMANAGEMENT_PATCH_PATTERN));
     if (!string)
         return ERR_PATCH_STRING_NOT_FOUND;
 
@@ -434,7 +444,7 @@ UINT8 patch_nested_module(UINT8* module)
     UINT8* string;
     INT32 module_size_change;
     UINT8 result;
-    FILE *file;
+    //FILE *file;
 
 
     if(!module)
@@ -444,10 +454,10 @@ UINT8 patch_nested_module(UINT8* module)
     data = module + sizeof(module_header);
     
     // Writing file "packed.rom"
-    file = fopen("packed.rom", "wb");
+    /*file = fopen("packed.rom", "wb");
     if(file)
         fwrite(module, sizeof(INT8), size2int(header->size), file); 
-    
+    */
     compressed_header = (compressed_section_header*) data;
     if(compressed_header->type != SECTION_COMPRESSED)
         return ERR_UNKNOWN_MODULE;
@@ -491,10 +501,10 @@ UINT8 patch_nested_module(UINT8* module)
     }
 
     // Writing file "unpacked.rom"
-    file = fopen("unpacked.rom", "wb");
+    /*file = fopen("unpacked.rom", "wb");
     if(file)
         fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
-    
+    */
     // Searching for PowerManagement modules 
     if (string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_UUID, UUID_LENGTH))
     {
@@ -522,14 +532,15 @@ UINT8 patch_nested_module(UINT8* module)
     }
     
     // Writing file "patched.rom"
-    file = fopen("patched.rom", "wb");
+    /*file = fopen("patched.rom", "wb");
     if(file)
         fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
-
+    */
     // Compressing patched module 
     switch(compressed_header->compression_type)
     {
     case COMPRESSION_TIANO:
+        compressed = 0;
         compressed_size = 0;
         if (TianoCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
             return ERR_TIANO_COMPRESSION_FAILED;
@@ -538,6 +549,7 @@ UINT8 patch_nested_module(UINT8* module)
             return ERR_TIANO_COMPRESSION_FAILED;
         break;
     case COMPRESSION_LZMA:
+        compressed = 0;
         compressed_size = 0;
         if(LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size, 9) != EFI_BUFFER_TOO_SMALL)
             return ERR_LZMA_COMPRESSION_FAILED;
@@ -588,10 +600,10 @@ UINT8 patch_nested_module(UINT8* module)
     header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
 
     // Writing file "repacked.rom"
-    file = fopen("repacked.rom", "wb");
+    /*file = fopen("repacked.rom", "wb");
     if(file)
         fwrite(module, sizeof(INT8), size2int(header->size), file); 
-
+    */
     return ERR_PATCHED;
 }
 
