@@ -16,7 +16,6 @@
 #include "Sdk/C/7zVersion.h"
 #include "Sdk/C/LzmaDec.h"
 
-STATIC
 UINT64
 EFIAPI
 LShiftU64 (
