@@ -34,8 +34,10 @@ CONST UINT8 CPUPEI_UUID[] =
 {0xA9,0xAF,0xB5,0x2B,0x33,0xFF,0x7B,0x41,0x84,0x97,0xCB,0x77,0x3C,0x2B,0x93,0xBF};
 CONST UINT8 PLATFORMSETUPADVANCED_UUID[] =
 {0xC4,0x94,0xEF,0xCF,0x67,0x41,0x6A,0x46,0x88,0x93,0x87,0x79,0x45,0x9D,0xFA,0x86};
-CONST UINT8 DELL_RAW_FILE_GUID[] =
+CONST UINT8 DELL_RAW_FILE_UUID[] =
 {0x7F,0x36,0x3E,0xF3,0xD2,0x41,0x01,0x42,0x9C,0xB7,0xAF,0xA6,0x3D,0xCC,0xEE,0xC9};
+CONST UINT8 GAP_UUID[] = 
+{0x85,0x65,0x53,0xE4,0x09,0x79,0x60,0x4A,0xB5,0xC6,0xEC,0xDE,0xA6,0xEB,0xFB,0x54};
 
 // PowerManagement patch 
 CONST UINT8 POWERMANAGEMENT_PATCH_PATTERN[] =
@@ -145,6 +147,52 @@ UINT8 correct_checksums(UINT8* module)
     header->data_checksum = 0;
     header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
     header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
+
+    return ERR_PATCHED;
+}
+
+UINT8 insert_gap_after(UINT8* begin, UINT8* end, UINT32 gap_size)
+{
+    UINT8 *gap;
+    module_header *gap_header;
+    UINT32 size;
+    UINT32 allignment;
+
+    if(!begin || !end || end <= begin)
+        return ERR_INVALID_ARGUMENT;
+
+    size = end - begin;
+    if(size % MODULE_ALLIGNMENT)
+        allignment = MODULE_ALLIGNMENT - size % MODULE_ALLIGNMENT;
+    else
+        allignment = 0;
+
+    gap_size -= allignment;
+    if (gap_size < sizeof(module_header))
+        return ERR_INVALID_ARGUMENT;
+    
+    memset(end, 0xFF, allignment);
+
+    gap = end + allignment;
+    gap_header = (module_header*) gap;
+
+    // Constructing gap header
+    memcpy(gap_header->guid, GAP_UUID, sizeof(GAP_UUID));
+    gap_header->type = TYPE_GAP;
+    gap_header->attributes = ATTRIBUTES_GAP;
+    gap_header->state = STATE_GAP;
+    int2size(gap_size, gap_header->size);
+
+    // Filling gap with 0xFF byte
+    memset(gap + sizeof(module_header), 0xFF, gap_size - sizeof(module_header));
+
+    // Calculating checksums
+    gap_header->header_checksum = 0;
+    gap_header->data_checksum = 0;
+    gap_header->header_checksum = calculate_checksum(gap, sizeof(module_header) - 1);
+    gap_header->data_checksum = 0xAA;
+
+    printf("%d bytes of gap inserted after repacked module.\n", gap_size);
 
     return ERR_PATCHED;
 }
@@ -299,8 +347,9 @@ UINT8 patch_powermanagement_module(UINT8* module)
             UINT32 grow = data_size - compressed_size;
             UINT8* end = data + data_size;
             for(freespace_length = 0; *end++ == 0xFF; freespace_length++);
-            if(grow + freespace_length >= 8)
-                continue;
+            if (grow + freespace_length >= 8)
+                if(insert_gap_after(module, data + compressed_size, grow))
+                    continue;
         }
 
         is_patched = TRUE;
@@ -387,8 +436,6 @@ UINT8 patch_platformsetupadvanced_module(UINT8* module)
     {
         memcpy(string, PLATFORMSETUPADVANCED_UNICODE_PATCHED_PATTERN, sizeof(PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN));
     }
-    else 
-        return ERR_PATCH_STRING_NOT_FOUND;
 
     // Searching for all patch strings 
     is_found = FALSE;
@@ -444,7 +491,6 @@ UINT8 patch_nested_module(UINT8* module)
     UINT8* string;
     INT32 module_size_change;
     UINT8 result;
-    //FILE *file;
 
 
     if(!module)
@@ -453,11 +499,6 @@ UINT8 patch_nested_module(UINT8* module)
     header = (module_header*) module;
     data = module + sizeof(module_header);
     
-    // Writing file "packed.rom"
-    /*file = fopen("packed.rom", "wb");
-    if(file)
-        fwrite(module, sizeof(INT8), size2int(header->size), file); 
-    */
     compressed_header = (compressed_section_header*) data;
     if(compressed_header->type != SECTION_COMPRESSED)
         return ERR_UNKNOWN_MODULE;
@@ -500,11 +541,6 @@ UINT8 patch_nested_module(UINT8* module)
         return ERR_UNKNOWN_COMPRESSION_TYPE;
     }
 
-    // Writing file "unpacked.rom"
-    /*file = fopen("unpacked.rom", "wb");
-    if(file)
-        fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
-    */
     // Searching for PowerManagement modules 
     if (string = find_pattern(decompressed, decompressed_size, POWERMANAGEMENT_UUID, UUID_LENGTH))
     {
@@ -531,11 +567,6 @@ UINT8 patch_nested_module(UINT8* module)
             printf("Nested PlatformSetupAdvancedDxe.efi at %08X patched.\n", string - module);
     }
     
-    // Writing file "patched.rom"
-    /*file = fopen("patched.rom", "wb");
-    if(file)
-        fwrite(decompressed, sizeof(INT8), decompressed_size, file); 
-    */
     // Compressing patched module 
     switch(compressed_header->compression_type)
     {
@@ -564,6 +595,7 @@ UINT8 patch_nested_module(UINT8* module)
     default:
         return ERR_UNKNOWN_COMPRESSION_TYPE;
     }
+
     module_size_change = compressed_size - data_size;
     // Checking that new compressed module can be inserted 
     if (module_size_change > 0) // Compressed module is bigger then original
@@ -579,11 +611,15 @@ UINT8 patch_nested_module(UINT8* module)
         // Checking if there is another module after this one
         INT32 pos;
         for(pos = 0; data[data_size+pos] == 0xFF; pos++);
-        if(pos < 8 && -module_size_change + pos > 7)
-            return ERR_PATCHED_MODULE_INSERTION_FAILED;
-
-        memset(data + compressed_size, 0xFF, data_size - compressed_size);
+        if (pos < 8 && -module_size_change + pos > 7)
+        {
+            if (insert_gap_after(module, data + compressed_size, data_size - compressed_size))
+                return ERR_PATCHED_MODULE_INSERTION_FAILED;
+        }
+        else
+            memset(data + compressed_size, 0xFF, data_size - compressed_size);
     }
+
     // Writing new module 
     if (compressed_header->compression_type != COMPRESSION_NONE)
     {
@@ -593,18 +629,9 @@ UINT8 patch_nested_module(UINT8* module)
         // Writing new module size 
         int2size(size2int(header->size) + module_size_change, header->size);
     }
-    // Calculating new module checksums 
-    header->header_checksum = 0;
-    header->data_checksum = 0;
-    header->header_checksum = calculate_checksum(module, sizeof(module_header) - 1);
-    header->data_checksum = calculate_checksum(module + sizeof(module_header), size2int(header->size) - sizeof(module_header));
 
-    // Writing file "repacked.rom"
-    /*file = fopen("repacked.rom", "wb");
-    if(file)
-        fwrite(module, sizeof(INT8), size2int(header->size), file); 
-    */
-    return ERR_PATCHED;
+    // Correcting checksums
+    return correct_checksums(module);
 }
 
 UINT8 patch_bios(UINT8* bios, UINT32 size)
@@ -738,7 +765,7 @@ UINT8 patch_bios(UINT8* bios, UINT32 size)
             printf("Nested PowerManagement2.efi module at %08X patched.\n", module - bios);
             
             // Fixing RAW file checksum in Dell BIOSes
-            raw_file = find_pattern(bios, size, DELL_RAW_FILE_GUID, UUID_LENGTH);
+            raw_file = find_pattern(bios, size, DELL_RAW_FILE_UUID, UUID_LENGTH);
             if(raw_file)
                 if(!correct_checksums(raw_file))
                     printf("Dell RAW file checksums corrected.\n");

@@ -16,32 +16,37 @@
 
 #include "Common/UefiBaseTypes.h"
 
-#define UUID_LENGTH 16
+#define UUID_LENGTH             16
+#define MODULE_ALLIGNMENT       8
 
-// Data structures 
-// Common UEFI module header 
+// Data structures
 #pragma pack(push, 1)
+// Common UEFI module header 
 typedef struct {
     UINT8 guid[UUID_LENGTH];
     UINT8 header_checksum;
     UINT8 data_checksum;
     UINT8 type;
-    UINT8 atributes;
+    UINT8 attributes;
     UINT8 size[3];
     UINT8 state;
 } module_header;
+// Gap module type, attributes and state
+#define TYPE_GAP                0xF0
+#define ATTRIBUTES_GAP          0x00
+#define STATE_GAP               0xF8
 
-// Compressed section type for nested module
-#define SECTION_COMPRESSED  0x01
-// GUID-defined section for Dell PowerManagement2.efi module
-#define SECTION_GUID_DEFINED 0x02
-// DXE driver section type for PowerManagement module 
-#define SECTION_DXE_DEPEX   0x13
 // Common section header 
 typedef struct {
     UINT8 size[3];
     UINT8 type;
 } common_section_header;
+// Compressed section type for nested module
+#define SECTION_COMPRESSED      0x01
+// GUID-defined section for Dell PowerManagement2.efi module
+#define SECTION_GUID_DEFINED    0x02
+// DXE driver section type for PowerManagement module 
+#define SECTION_DXE_DEPEX       0x13
 
 // GUID-defined section header
 typedef struct {    
@@ -52,12 +57,6 @@ typedef struct {
     UINT16 attributes;
 } guid_section_header;
 
-// Uncompressed data type 
-#define COMPRESSION_NONE 0x00
-// Tiano compressed data type 
-#define COMPRESSION_TIANO 0x01
-// LZMA compressed data type 
-#define COMPRESSION_LZMA  0x02
 // Compressed section header 
 typedef struct {
     UINT8 size[3];
@@ -65,6 +64,12 @@ typedef struct {
     UINT32 decompressed_size;
     UINT8 compression_type;
 } compressed_section_header;
+// Uncompressed data type 
+#define COMPRESSION_NONE        0x00
+// Tiano compressed data type 
+#define COMPRESSION_TIANO       0x01
+// LZMA compressed data type 
+#define COMPRESSION_LZMA        0x02
 #pragma pack(pop)
 
 // Error codes 
