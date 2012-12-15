@@ -1,6 +1,6 @@
 /* LZMA Compress Implementation
 
-  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.<BR>
+  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -70,8 +70,8 @@ LzmaCompress (
 {
     SRes              LzmaResult;
     CLzmaEncProps     props;
-    UINT32 propsSize = LZMA_PROPS_SIZE;
-    UINT32 destLen = SourceSize + SourceSize / 3 + 128;
+    SizeT propsSize = LZMA_PROPS_SIZE;
+    SizeT destLen = SourceSize + SourceSize / 3 + 128;
 
     if (*DestinationSize < destLen)
     {

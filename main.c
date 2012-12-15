@@ -1,6 +1,6 @@
 /* PMPatch
 
-  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.<BR>
+  Copyright (c) 2012, Nikolaj Schlej. All rights reserved.
   This program and the accompanying materials
   are licensed and made available under the terms and conditions of the BSD License
   which accompanies this distribution.  The full text of the license may be found at
@@ -22,8 +22,7 @@
 #define ERR_INPUT_FILE                   2
 #define ERR_OUTPUT_FILE                  3
 #define ERR_MEMORY                       4
-#define ERR_NO_MODULE                    5
-#define ERR_PATCH                        6
+#define ERR_NOT_PATCHED					 5
 
 int main(int argc, char* argv[])
 {
@@ -31,11 +30,10 @@ int main(int argc, char* argv[])
     char* inputfile;
     char* outputfile;
     UINT8* buffer;
-    INT32 filesize;
-    INT32 read;
-    UINT8 patch_result;
+    size_t filesize;
+    size_t read;
 
-    printf("PMPatch 0.5.5\n");
+    printf("PMPatch 0.5.6\n");
     if(argc < 3)
     {
         printf("This program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
@@ -79,9 +77,9 @@ int main(int argc, char* argv[])
     fclose(file);
 
     // Patching BIOS 
-    patch_result = patch_bios(buffer, filesize);
-    if(patch_result)
-        return ERR_PATCH;
+    if(!patch_bios(buffer, filesize))
+        return ERR_NOT_PATCHED;
+	printf("Input file patched.\n");
 
     // Creating output file
     file = fopen(outputfile, "wb");

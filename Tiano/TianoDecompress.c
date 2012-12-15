@@ -1,6 +1,6 @@
 /* Tiano Decompress Implementation
 
-Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2004 - 2008, Intel Corporation. All rights reserved.
 This program and the accompanying materials
 are licensed and made available under the terms and conditions of the BSD License
 which accompanies this distribution.  The full text of the license may be found at
@@ -615,10 +615,6 @@ Returns: (VOID)
   UINT16  BytesRemain;
   UINT32  DataIdx;
   UINT16  CharC;
-
-  BytesRemain = (UINT16) (-1);
-
-  DataIdx     = 0;
 
   for (;;) {
     CharC = DecodeC (Sd);
