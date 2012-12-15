@@ -15,8 +15,9 @@ SOURCES += \
 
 HEADERS += \
     patch.h \
+    patch_int.h \
     Tiano/TianoCompress.h \
     Tiano/TianoDecompress.h \ 
     LZMA/LzmaCompress.h \
     LZMA/LzmaDecompress.h \
-    LZMA/UefiLzma1.h
+    LZMA/UefiLzma.h
