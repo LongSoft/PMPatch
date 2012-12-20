@@ -113,7 +113,7 @@ UINT8 insert_gap_after(UINT8* begin, UINT8* end, UINT32 gap_size)
     memcpy(gap_header->guid, GAP_UUID, sizeof(GAP_UUID));
     gap_header->type = TYPE_GAP;
     gap_header->attributes = ATTRIBUTES_GAP;
-    gap_header->state = STATE_GAP;
+    gap_header->state = STATE_STD;
     int2size(gap_size, gap_header->size);
 
     // Filling gap with 0xFF byte
@@ -154,6 +154,9 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
         return ERR_INVALID_ARGUMENT;
 	
 	header = (module_header*) module;
+	if (header->state != STATE_STD)
+		return ERR_NOT_MODULE; 
+
     data = module + sizeof(module_header);
 	    
     common_header = (common_section_header*) data;
@@ -320,12 +323,17 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
 
 UINT8 patch_powermanagement2_module(UINT8* module,  UINT8 start_patch)
 {
-    UINT8* string;
+	module_header* header; 
+	UINT8* string;
     UINT8* data;
     guid_section_header *guid_header;
 
     if(!module || start_patch >= PATCHED_PATTERNS_COUNT)
         return ERR_INVALID_ARGUMENT;
+
+	header = (module_header*) module;
+	if (header->state != STATE_STD)
+		return ERR_NOT_MODULE; 
 
     data = module + sizeof(module_header);
 
@@ -359,13 +367,18 @@ UINT8 patch_powermanagement2_module(UINT8* module,  UINT8 start_patch)
 
 UINT8 patch_platformsetupadvanced_module(UINT8* module)
 {
-    UINT8* string;
+    module_header* header; 
+	UINT8* string;
     UINT8* data;
     guid_section_header *guid_header;
     BOOLEAN is_found;
 
     if(!module)
         return ERR_INVALID_ARGUMENT;
+
+	header = (module_header*) module;
+	if (header->state != STATE_STD)
+		return ERR_NOT_MODULE; 
 
     data = module + sizeof(module_header);
 
@@ -403,11 +416,15 @@ UINT8 patch_platformsetupadvanced_module(UINT8* module)
 
 UINT8 patch_cpupei_module(UINT8* module)
 {
-    UINT8* string;
-    module_header *header;
+    module_header* header; 
+	UINT8* string;
 
     if(!module)
         return ERR_INVALID_ARGUMENT;
+
+	header = (module_header*) module;
+	if (header->state != STATE_STD)
+		return ERR_NOT_MODULE; 
 
     header = (module_header*) module;
 
@@ -440,13 +457,16 @@ UINT8 patch_nested_module(UINT8* module)
     UINT8 current_patch;
 	UINT8 result;
 	BOOLEAN is_patched;
-
+	BOOLEAN is_module_patched;
 
     if(!module)
         return ERR_INVALID_ARGUMENT;
 
     header = (module_header*) module;
-    data = module + sizeof(module_header);
+	if (header->state != STATE_STD)
+		return ERR_NOT_MODULE; 
+	
+	data = module + sizeof(module_header);
     
     compressed_header = (compressed_section_header*) data;
     if(compressed_header->type != SECTION_COMPRESSED)
@@ -506,30 +526,126 @@ UINT8 patch_nested_module(UINT8* module)
 	is_patched = FALSE;
 	scratch = (UINT8*)malloc(decompressed_size);
 	if(!scratch)
-		return ERR_PATCHED_MODULE_INSERTION_FAILED;
+		return ERR_MEMORY_ALLOCATION_FAILED;
+
 	for(current_patch = 0; current_patch < PATCHED_PATTERNS_COUNT; current_patch++)
 	{
 		// Making a copy of decompressed module
 		memcpy(scratch, decompressed, decompressed_size);
 
-		// Searching for PowerManagement modules 
-		if (string = find_pattern(scratch, decompressed_size, POWERMANAGEMENT_UUID, UUID_LENGTH))
+		is_module_patched = FALSE;
+
+		// Searching for all PowerManagement modules 
+		for (string = find_pattern(scratch, decompressed_size, POWERMANAGEMENT_UUID, UUID_LENGTH);
+			 string;
+			 string = find_pattern(string + UUID_LENGTH, decompressed_size - (string - scratch) - UUID_LENGTH, POWERMANAGEMENT_UUID, UUID_LENGTH))
 		{
 			// Patching PowerManagement module 
 			result = patch_powermanagement_module(string, current_patch);
-			if (result)
-				return result;
+			
+			if (!result)
+			{
+				printf("Nested PowerManagement module at %08X patched.\n", string - module);
+				is_module_patched = TRUE;
+				continue;
+			}
+
+			printf("Nested PowerManagement module at %08X not patched: ", string - module);
+			switch (result)
+			{
+			case ERR_INVALID_ARGUMENT:
+				printf("Invalid parameter.\n");
+				break;
+			case ERR_NOT_MODULE:
+				printf("Unknown module state.\n");
+				break;
+			case ERR_UNKNOWN_MODULE:
+				printf("Unknown module structure.\n");
+				break;
+			case ERR_UNKNOWN_COMPRESSION_TYPE:
+				printf("Unknown compression type.\n");
+				break;
+			case ERR_TIANO_DECOMPRESSION_FAILED:
+				printf("Tiano decompression failed.\n");
+				break;
+			case ERR_LZMA_DECOMPRESSION_FAILED:
+				printf("LZMA decompression failed.\n");
+				break;
+			case ERR_PATCH_STRING_NOT_FOUND:
+				printf("Patch pattern not found.\n");
+				break;
+			case ERR_TIANO_COMPRESSION_FAILED:
+				printf("Tiano compression failed.\n");
+				break;
+			case ERR_LZMA_COMPRESSION_FAILED:
+				printf("LZMA compression failed.\n");
+				break;
+			case ERR_MEMORY_ALLOCATION_FAILED:
+				printf("Memory allocation failed.\n");
+				break;
+			default:
+				printf("Unknown error.\n");
+				break;
+			}
 		}
-		else if (string = find_pattern(scratch, decompressed_size, POWERMANAGEMENT2_UUID, UUID_LENGTH))
+
+		// Searching for all PowerManagement2.efi modules 
+		for (string = find_pattern(scratch, decompressed_size, POWERMANAGEMENT2_UUID, UUID_LENGTH);
+			 string;
+			 string = find_pattern(string + UUID_LENGTH, decompressed_size - (string - scratch) - UUID_LENGTH, POWERMANAGEMENT2_UUID, UUID_LENGTH))
 		{
 			// Patching PowerManagement2.efi module 
 			result = patch_powermanagement2_module(string, current_patch);
-			if (result)
-				return result;
+			
+			if (!result)
+			{
+				printf("Nested PowerManagement2.efi module at %08X patched.\n", string - module);
+				is_module_patched = TRUE;
+				continue;
+			}
+
+			printf("Nested PowerManagement2.efi module at %08X not patched: ", string - module);
+			switch (result)
+			{
+			case ERR_INVALID_ARGUMENT:
+				printf("Invalid parameter.\n");
+				break;
+			case ERR_NOT_MODULE:
+				printf("Unknown module state.\n");
+				break;
+			case ERR_UNKNOWN_MODULE:
+				printf("Unknown module structure.\n");
+				break;
+			case ERR_UNKNOWN_COMPRESSION_TYPE:
+				printf("Unknown compression type.\n");
+				break;
+			case ERR_TIANO_DECOMPRESSION_FAILED:
+				printf("Tiano decompression failed.\n");
+				break;
+			case ERR_LZMA_DECOMPRESSION_FAILED:
+				printf("LZMA decompression failed.\n");
+				break;
+			case ERR_PATCH_STRING_NOT_FOUND:
+				printf("Patch pattern not found.\n");
+				break;
+			case ERR_TIANO_COMPRESSION_FAILED:
+				printf("Tiano compression failed.\n");
+				break;
+			case ERR_LZMA_COMPRESSION_FAILED:
+				printf("LZMA compression failed.\n");
+				break;
+			case ERR_MEMORY_ALLOCATION_FAILED:
+				printf("Memory allocation failed.\n");
+				break;
+			default:
+				printf("Unknown error.\n");
+				break;
+			}
 		}
-		else 
+		
+		if (!is_module_patched)
 			return ERR_MODULE_NOT_FOUND;
-	    
+		
 		// Compressing patched module 
 		switch(compressed_header->compression_type)
 		{
@@ -645,6 +761,9 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         case ERR_INVALID_ARGUMENT:
             printf("Invalid parameter.\n");
             break;
+		case ERR_UNKNOWN_MODULE:
+			printf("Unknown module structure.\n");
+			break;
         case ERR_UNKNOWN_COMPRESSION_TYPE:
             printf("Unknown compression type.\n");
             break;
@@ -664,7 +783,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             printf("LZMA compression failed.\n");
             break;
         case ERR_PATCHED_MODULE_INSERTION_FAILED:
-            printf("Repacked module can not be inserted.\n");
+            printf("Repacked module can't be inserted.\n");
             break;
 		case ERR_MEMORY_ALLOCATION_FAILED:
 			printf("Memory allocation failed.\n");
@@ -675,9 +794,9 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         }
     }
     if (!is_found)
-        printf("PowerManagement module not found.\n");    
+        printf("PowerManagement modules not found.\n");    
 
-    // Searching for all nested PowerManagement modules
+    // Searching for all common nested modules
     is_found = FALSE;
     for (module = find_pattern(bios, size, NESTED_UUID, UUID_LENGTH);
         module;
@@ -688,17 +807,20 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
         if (!patch_result)
         {
-            printf("Nested PowerManagement module at %08X patched.\n", module - bios);
+            printf("AMI nest module at %08X patched.\n", module - bios);
             is_patched = TRUE;
 			continue;
         }
 
-        printf("Nested PowerManagement module at %08X not patched: ", module - bios);
+        printf("AMI nest module at %08X not patched: ", module - bios);
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
             printf("Invalid argument.\n");
             break;
+		case ERR_UNKNOWN_MODULE:
+			printf("Unknown module structure.\n");
+			break;
         case ERR_UNKNOWN_COMPRESSION_TYPE:
             printf("Unknown compression type.\n");
             break;
@@ -718,10 +840,10 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             printf("LZMA compression failed.\n");
             break;
         case ERR_PATCHED_MODULE_INSERTION_FAILED:
-            printf("Repacked module can not be inserted.\n");
+            printf("Repacked module can't be inserted.\n");
             break;
         case ERR_MODULE_NOT_FOUND:
-            printf("PowerManagement module not found in nested module.\n");
+            printf("PowerManagement modules not found in nested module.\n");
             break;
 	    case ERR_MEMORY_ALLOCATION_FAILED:
 			printf("Memory allocation failed.\n");
@@ -733,7 +855,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
     }
     if (!is_found)
-        printf("Nested PowerManagement module not found.\n"); 
+        printf("AMI nest modules not found.\n"); 
 
     // Searching for all nested PowerManagement2.efi modules
     is_found = FALSE;
@@ -746,7 +868,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
         if (!patch_result)
         {
-            printf("Nested PowerManagement2.efi module at %08X patched.\n", module - bios);
+            printf("Phoenix nest module at %08X patched.\n", module - bios);
             is_patched = TRUE;
 
             // Fixing RAW file checksum in Dell BIOSes
@@ -757,12 +879,15 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             continue;
         }
 
-        printf("Nested PowerManagement2.efi module at %08X not patched: ", module - bios);
+        printf("Phoenix nest module at %08X not patched: ", module - bios);
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
             printf("Invalid argument.\n");
             break;
+		case ERR_UNKNOWN_MODULE:
+			printf("Unknown module structure.\n");
+			break;
         case ERR_UNKNOWN_COMPRESSION_TYPE:
             printf("Unknown compression type.\n");
             break;
@@ -782,10 +907,10 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             printf("LZMA compression failed.\n");
             break;
         case ERR_PATCHED_MODULE_INSERTION_FAILED:
-            printf("Repacked module can not be inserted.\n");
+            printf("Repacked module can't be inserted.\n");
             break;
         case ERR_MODULE_NOT_FOUND:
-            printf("PowerManagement2.efi module not found in nested module.\n");
+            printf("PowerManagement modules not found in nested module.\n");
             break;
 		case ERR_MEMORY_ALLOCATION_FAILED:
 			printf("Memory allocation failed.\n");
@@ -796,7 +921,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         }
     }
     if (!is_found)
-        printf("Nested PowerManagement2.efi module not found.\n"); 
+        printf("Phoenix nest modules not found.\n"); 
 
     // Searching for all CpuPei modules
     is_found = FALSE;
@@ -829,7 +954,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         }
     }
     if (!is_found)
-        printf("CpuPei module not found.\n");   
+        printf("CpuPei modules not found.\n");   
 
 	return is_patched;
 }

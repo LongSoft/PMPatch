@@ -41,7 +41,7 @@ typedef struct {
 // Gap module type, attributes and state
 #define TYPE_GAP                0xF0
 #define ATTRIBUTES_GAP          0x00
-#define STATE_GAP               0xF8
+#define STATE_STD               0xF8
 
 // Common section header 
 typedef struct {
@@ -82,16 +82,17 @@ typedef struct {
 // Error codes 
 #define ERR_PATCHED                         0x00
 #define ERR_INVALID_ARGUMENT                0x01
-#define ERR_UNKNOWN_MODULE                  0x02
-#define ERR_UNKNOWN_COMPRESSION_TYPE        0x03
-#define ERR_TIANO_DECOMPRESSION_FAILED      0x04
-#define ERR_LZMA_DECOMPRESSION_FAILED       0x05
-#define ERR_PATCH_STRING_NOT_FOUND          0x06
-#define ERR_TIANO_COMPRESSION_FAILED        0x07
-#define ERR_LZMA_COMPRESSION_FAILED         0x08
-#define ERR_PATCHED_MODULE_INSERTION_FAILED 0x09
-#define ERR_MODULE_NOT_FOUND                0x0A
-#define ERR_MEMORY_ALLOCATION_FAILED        0x0B
+#define ERR_NOT_MODULE						0x02
+#define ERR_UNKNOWN_MODULE                  0x03
+#define ERR_UNKNOWN_COMPRESSION_TYPE        0x04
+#define ERR_TIANO_DECOMPRESSION_FAILED      0x05
+#define ERR_LZMA_DECOMPRESSION_FAILED       0x06
+#define ERR_PATCH_STRING_NOT_FOUND          0x07
+#define ERR_TIANO_COMPRESSION_FAILED        0x08
+#define ERR_LZMA_COMPRESSION_FAILED         0x09
+#define ERR_PATCHED_MODULE_INSERTION_FAILED 0x0A
+#define ERR_MODULE_NOT_FOUND                0x0B
+#define ERR_MEMORY_ALLOCATION_FAILED        0x0C
 
 // UUIDs 
 CONST UINT8 NESTED_UUID[] = 
