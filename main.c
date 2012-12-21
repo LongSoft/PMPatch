@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
     fclose(file);
 
     // Patching BIOS 
-    if(!patch_bios(buffer, filesize))
+    if(!patch_bios(buffer, (UINT32)filesize))
         return ERR_NOT_PATCHED;
 	printf("Output file generated.\n");
 

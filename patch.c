@@ -14,11 +14,11 @@
 #include "patch_int.h"
 
 // Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm 
-UINT8* find_pattern(UINT8* string, UINT64 slen, CONST UINT8* pattern, UINT64 plen)
+UINT8* find_pattern(UINT8* string, UINT32 slen, CONST UINT8* pattern, UINT32 plen)
 {
-    UINT64 scan = 0;
-    UINT64 bad_char_skip[256];
-    UINT64 last;
+    UINT32 scan = 0;
+    UINT32 bad_char_skip[256];
+    UINT32 last;
 
     if (plen == 0 || !string || !pattern)
         return NULL;
@@ -226,7 +226,7 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     is_patched = FALSE;
 	for(current_patch = start_patch; current_patch < PATCHED_PATTERNS_COUNT; current_patch++)
     {
-        // Patching found string with current patch 
+		// Patching found string with current patch 
         memcpy(string, POWERMANAGEMENT_PATCHED_PATTERNS[current_patch], sizeof(POWERMANAGEMENT_PATCH_PATTERN));
 
         // Compressing patched module 
@@ -283,8 +283,8 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
                     can_insert = FALSE;
                     break;
                 }
-                if(!can_insert)
-                    continue;
+            if(!can_insert)
+				continue;
         }
         else if (data_size > compressed_size)
         {
@@ -515,7 +515,8 @@ UINT8 patch_nested_module(UINT8* module)
     }
 
 	// Searching for PlatformSetupAdvancedDxe.efi module
-	if (string = find_pattern(decompressed, decompressed_size, PLATFORMSETUPADVANCED_UUID, UUID_LENGTH))
+	string = find_pattern(decompressed, decompressed_size, PLATFORMSETUPADVANCED_UUID, UUID_LENGTH);
+	if (string)
     {
         result = patch_platformsetupadvanced_module(string);
         if (!result)
@@ -530,6 +531,8 @@ UINT8 patch_nested_module(UINT8* module)
 
 	for(current_patch = 0; current_patch < PATCHED_PATTERNS_COUNT; current_patch++)
 	{
+		printf("Trying to apply patch #%d\n", current_patch + 1);
+
 		// Making a copy of decompressed module
 		memcpy(scratch, decompressed, decompressed_size);
 
@@ -686,7 +689,10 @@ UINT8 patch_nested_module(UINT8* module)
 			INT32 pos;
 			for(pos = 0; data[data_size+pos] == 0xFF; pos++);
 			if(pos < module_size_change)
+			{
+				printf ("Patched module too big after compression.\n");
 				continue;
+			}
 		}
 		else if (module_size_change < 0) // Compressed module is smaller then original
 		{
@@ -696,7 +702,10 @@ UINT8 patch_nested_module(UINT8* module)
 			if (pos < 8 && -module_size_change + pos > 7)
 			{
 				if (insert_gap_after(module, data + compressed_size, data_size - compressed_size))
+				{
+					printf ("Patched module is smaller then original after compression, but gap module can't be inserted.\n");
 					continue;
+				}
 			}
 			else
 				memset(data + compressed_size, 0xFF, data_size - compressed_size);
@@ -736,7 +745,6 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         return ERR_INVALID_ARGUMENT;
 
     bios_end = bios + size;
-    module = bios;
 
 	is_patched = FALSE;
 

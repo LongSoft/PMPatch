@@ -70,8 +70,8 @@ LzmaCompress (
 {
     SRes              LzmaResult;
     CLzmaEncProps     props;
-    SizeT propsSize = LZMA_PROPS_SIZE;
-    SizeT destLen = SourceSize + SourceSize / 3 + 128;
+    UINTN propsSize = LZMA_PROPS_SIZE;
+    UINTN destLen = SourceSize + SourceSize / 3 + 128;
 
     if (*DestinationSize < destLen)
     {
