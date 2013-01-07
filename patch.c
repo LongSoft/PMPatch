@@ -147,8 +147,10 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     UINT8 current_patch;
     BOOLEAN is_patched;
     INT32 module_size_change;
-    UINT32 grow;
     UINT8 level;
+    UINT32 grow;
+    UINT32 freespace_length;
+    UINT8* end;
 
     if(!module || start_patch >= PATCHED_PATTERNS_COUNT)
         return ERR_INVALID_ARGUMENT;
@@ -272,28 +274,21 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
         }
 
         // Checking compressed data size 
-        if(data_size < compressed_size)
+        if (data_size < compressed_size)
         {
-            UINT32 grow = compressed_size - data_size;
-            UINT8* end = data + data_size;
-            BOOLEAN can_insert = TRUE;
-            while(grow--)
-                if(*end-- != 0xFF)
-                {
-                    can_insert = FALSE;
-                    break;
-                }
-            if(!can_insert)
+            grow = compressed_size - data_size;
+            end = data + data_size;
+            for (freespace_length = 0; *end++ == 0xFF; freespace_length++);
+            if (grow > freespace_length)
                 continue;
         }
         else if (data_size > compressed_size)
         {
-            UINT8 freespace_length;
-            UINT32 grow = data_size - compressed_size;
-            UINT8* end = data + data_size;
-            for(freespace_length = 0; *end++ == 0xFF; freespace_length++);
+            grow = data_size - compressed_size;
+            end = data + data_size;
+            for (freespace_length = 0; *end++ == 0xFF; freespace_length++);
             if (grow + freespace_length >= 8)
-                if(insert_gap_after(module, data + compressed_size, grow))
+                if (insert_gap_after(module, data + compressed_size, grow))
                     continue;
         }
 
@@ -305,9 +300,9 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
         return ERR_PATCHED_MODULE_INSERTION_FAILED;
 
     // Writing new module 
-    if(data_size > compressed_size)
+    if (data_size > compressed_size)
         memset(data + compressed_size, 0xFF, data_size - compressed_size);
-    if(compressed_header->compression_type != COMPRESSION_NONE)
+    if (compressed_header->compression_type != COMPRESSION_NONE)
     {
         memcpy(data, compressed, compressed_size);
         // Writing new compressed section size 
@@ -806,9 +801,9 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
     // Searching for all common nested modules
     is_found = FALSE;
-    for (module = find_pattern(bios, size, NESTED_UUID, UUID_LENGTH);
+    for (module = find_pattern(bios, size, AMI_NEST_UUID, UUID_LENGTH);
         module;
-        module = find_pattern(module+UUID_LENGTH, bios_end-module-UUID_LENGTH, NESTED_UUID, UUID_LENGTH)) 
+        module = find_pattern(module+UUID_LENGTH, bios_end-module-UUID_LENGTH, AMI_NEST_UUID, UUID_LENGTH)) 
     {
         is_found = TRUE;
         patch_result = patch_nested_module(module);
@@ -867,9 +862,9 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
     // Searching for all nested PowerManagement2.efi modules
     is_found = FALSE;
-    for (module = find_pattern(bios, size, PHOENIX_NESTED_UUID, UUID_LENGTH);
+    for (module = find_pattern(bios, size, PHOENIX_NEST_UUID, UUID_LENGTH);
         module;
-        module = find_pattern(module+UUID_LENGTH, bios_end-module-UUID_LENGTH, PHOENIX_NESTED_UUID, UUID_LENGTH)) 
+        module = find_pattern(module+UUID_LENGTH, bios_end-module-UUID_LENGTH, PHOENIX_NEST_UUID, UUID_LENGTH)) 
     {
         is_found = TRUE;
         patch_result = patch_nested_module(module);
