@@ -25,6 +25,7 @@
 #endif
 
 #define _LZMA_SIZE_OPT
+#define _7ZIP_ST
 
 #endif // __UEFILZMA_H__
 

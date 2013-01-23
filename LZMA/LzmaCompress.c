@@ -64,8 +64,7 @@ LzmaCompress (
   IN CONST VOID  *Source,
   IN UINTN       SourceSize,
   IN OUT VOID    *Destination,
-  IN OUT UINTN   *DestinationSize,
-  IN UINT8       CompressionLevel
+  IN OUT UINTN   *DestinationSize
   )
 {
     SRes              LzmaResult;
@@ -81,7 +80,8 @@ LzmaCompress (
         
     LzmaEncProps_Init(&props);
     props.dictSize = LZMA_DICTIONARY_SIZE;
-    props.level = CompressionLevel;
+    props.level = 9;
+    props.fb = 273;
 
     LzmaResult = LzmaEncode(
         (Byte*)((UINT8*)Destination + LZMA_HEADER_SIZE), 

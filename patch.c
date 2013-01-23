@@ -84,23 +84,43 @@ UINT8 correct_checksums(UINT8* module)
     return ERR_PATCHED;
 }
 
-UINT8 insert_gap_after(UINT8* begin, UINT8* end, UINT32 gap_size)
+UINT8 insert_gap_after(UINT8* module, UINT8* end, UINT32 gap_size)
 {
     UINT8 *gap;
+    module_header *header;
     module_header *gap_header;
     UINT32 size;
     UINT32 allignment;
 
-    if(!begin || !end || end <= begin)
+    if (!module || !end || end <= module)
         return ERR_INVALID_ARGUMENT;
 
-    size = end - begin;
-    if(size % MODULE_ALLIGNMENT)
+    // Checking for existing GAP module
+    // Determining next module position
+    header = (module_header *) module;
+    gap = module + size2int(header->size);
+    size = gap - module;
+    if (size % MODULE_ALLIGNMENT)
+        allignment = MODULE_ALLIGNMENT - size % MODULE_ALLIGNMENT;
+    else
+        allignment = 0;
+    gap += allignment;
+    // Checking for next module to be GAP
+    if (find_pattern(gap, sizeof(GAP_UUID), GAP_UUID, sizeof(GAP_UUID)))
+    {
+        header = (module_header *) gap;
+        // Using found GAP module as free space
+        gap_size += size2int(header->size) + allignment;
+    }
+
+    size = end - module;
+    if (size % MODULE_ALLIGNMENT)
         allignment = MODULE_ALLIGNMENT - size % MODULE_ALLIGNMENT;
     else
         allignment = 0;
 
     gap_size -= allignment;
+
     if (gap_size < sizeof(module_header))
         return ERR_INVALID_ARGUMENT;
     
@@ -118,7 +138,7 @@ UINT8 insert_gap_after(UINT8* begin, UINT8* end, UINT32 gap_size)
 
     // Filling gap with 0xFF byte
     memset(gap + sizeof(module_header), 0xFF, gap_size - sizeof(module_header));
-
+    
     // Calculating checksums
     gap_header->header_checksum = 0;
     gap_header->data_checksum = 0;
@@ -147,7 +167,6 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     UINT8 current_patch;
     BOOLEAN is_patched;
     INT32 module_size_change;
-    UINT8 level;
     UINT32 grow;
     UINT32 freespace_length;
     UINT8* end;
@@ -245,25 +264,15 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
                 return ERR_TIANO_COMPRESSION_FAILED;
             break;
         case COMPRESSION_LZMA:
-            for(level = 5; level < 10; level++)
-            {
-                compressed_size = 0;
-                if(LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size, level) != EFI_BUFFER_TOO_SMALL)
-                    return ERR_LZMA_COMPRESSION_FAILED;
-                compressed = (UINT8*)malloc(compressed_size);
-                if (!compressed)
-                    return ERR_MEMORY_ALLOCATION_FAILED;
-                if (LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size, level) != EFI_SUCCESS)
-                    return ERR_TIANO_COMPRESSION_FAILED;
-                grow = data_size > compressed_size ? data_size - compressed_size : compressed_size - data_size;
-                if(grow > 4)
-                {
-                    free(compressed);
-                    compressed = NULL;
-                }
-                else
-                    break;
-            }
+            compressed_size = 0;
+            if(LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
+                return ERR_LZMA_COMPRESSION_FAILED;
+            compressed = (UINT8*)malloc(compressed_size);
+            if (!compressed)
+                return ERR_MEMORY_ALLOCATION_FAILED;
+            if (LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
+                return ERR_TIANO_COMPRESSION_FAILED;
+            grow = data_size > compressed_size ? data_size - compressed_size : compressed_size - data_size;
             break;
         case COMPRESSION_NONE:
             compressed = decompressed;
@@ -661,12 +670,12 @@ UINT8 patch_nested_module(UINT8* module)
         case COMPRESSION_LZMA:
             compressed = 0;
             compressed_size = 0;
-            if(LzmaCompress(scratch, decompressed_size, compressed, &compressed_size, 9) != EFI_BUFFER_TOO_SMALL)
+            if(LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
                 return ERR_LZMA_COMPRESSION_FAILED;
             compressed = (UINT8*)malloc(compressed_size);
             if(!compressed)
                 return ERR_MEMORY_ALLOCATION_FAILED;
-            if (LzmaCompress(scratch, decompressed_size, compressed, &compressed_size, 9) != EFI_SUCCESS)
+            if (LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
             break;
         case COMPRESSION_NONE:

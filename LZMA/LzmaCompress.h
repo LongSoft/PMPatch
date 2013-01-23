@@ -24,8 +24,7 @@ LzmaCompress (
   IN CONST VOID  *Source,
   IN UINTN       SourceSize,
   IN OUT VOID    *Destination,
-  IN OUT UINTN   *DestinationSize,
-  IN UINT8       CompressionLevel
+  IN OUT UINTN   *DestinationSize
   );
 
 #endif
