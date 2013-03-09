@@ -33,10 +33,10 @@ int main(int argc, char* argv[])
     size_t filesize;
     size_t read;
 
-    printf("PMPatch 0.5.10\n");
+    printf("PMPatch 0.5.11\n");
     if(argc < 3)
     {
-        printf("This program patches UEFI BIOS files\nto be compatible with MacOS X SpeedStep implementation\n\n"
+        printf("This program patches UEFI BIOS files\nto be compatible with Mac OS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
         return ERR_ARGS;
     }

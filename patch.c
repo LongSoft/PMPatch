@@ -181,7 +181,7 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     data = module + sizeof(module_header);
         
     common_header = (common_section_header*) data;
-    // Skipping DXE dependancy section in the beginning of PowerManagement module 
+    // Skipping DXE dependency section in the beginning of PowerManagement module 
     if (common_header->type == SECTION_DXE_DEPEX)
         data += size2int(common_header->size);
     else 
@@ -369,6 +369,49 @@ UINT8 patch_powermanagement2_module(UINT8* module,  UINT8 start_patch)
     return correct_checksums(module);  
 }
 
+UINT8 patch_smmplatform_module(UINT8* module)
+{
+    module_header* header; 
+    UINT8* string;
+    UINT8* data;
+    guid_section_header *guid_header;
+    common_section_header *depex_header;
+
+    if(!module)
+        return ERR_INVALID_ARGUMENT;
+
+    header = (module_header*) module;
+    if (header->state != STATE_STD)
+        return ERR_NOT_MODULE; 
+
+    data = module + sizeof(module_header);
+
+    guid_header = (guid_section_header*) data;
+    // Skipping GUID definition section in the beginning of SmmPlatform module 
+    if (guid_header->type == SECTION_GUID_DEFINED)
+        data += guid_header->data_offset;
+    else 
+        return ERR_UNKNOWN_MODULE;
+
+    depex_header = (common_section_header*) data;
+    // Skipping DXE dependency section in the beginning of SmmPlatform module 
+    if (depex_header->type == SECTION_DXE_DEPEX)
+        data += size2int(depex_header->size);
+    else 
+        return ERR_UNKNOWN_MODULE;
+
+    // Searching for patch pattern
+    string = find_pattern(data, size2int(guid_header->size) - size2int(depex_header->size), SMMPLATFORM_PATCH_PATTERN, sizeof(SMMPLATFORM_PATCH_PATTERN));
+    if (!string)
+        return ERR_PATCH_STRING_NOT_FOUND;
+
+    // Patching
+    memcpy(string, SMMPLATFORM_PATCHED_PATTERN, sizeof(SMMPLATFORM_PATCHED_PATTERN));
+
+    // Correcting checksums
+    return correct_checksums(module);  
+}
+
 UINT8 patch_platformsetupadvanced_module(UINT8* module)
 {
     module_header* header; 
@@ -394,12 +437,14 @@ UINT8 patch_platformsetupadvanced_module(UINT8* module)
         return ERR_UNKNOWN_MODULE;
 
     
-    // Searching for unicode patch string
+    // Searching for Unicode patch string
     string = find_pattern(data, size2int(guid_header->size), PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN, sizeof(PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN));
     if(string)
     {
         memcpy(string, PLATFORMSETUPADVANCED_UNICODE_PATCHED_PATTERN, sizeof(PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN));
     }
+    else
+        return ERR_PATCH_STRING_NOT_FOUND; // TIP: Remove this line to make more BIOSes patchable
 
     // Searching for all patch strings 
     is_found = FALSE;
@@ -530,10 +575,10 @@ UINT8 patch_nested_module(UINT8* module)
     // Trying to patch PowerManagement modules with all patch patterns
     is_patched = FALSE;
     scratch = (UINT8*)malloc(decompressed_size);
-    if(!scratch)
+    if (!scratch)
         return ERR_MEMORY_ALLOCATION_FAILED;
 
-    for(current_patch = 0; current_patch < PATCHED_PATTERNS_COUNT; current_patch++)
+    for (current_patch = 0; current_patch < PATCHED_PATTERNS_COUNT; current_patch++)
     {
         printf("Trying to apply patch #%d\n", current_patch + 1);
 
@@ -552,12 +597,12 @@ UINT8 patch_nested_module(UINT8* module)
             
             if (!result)
             {
-                printf("Nested PowerManagement module at %08X patched.\n", string - module);
+                printf("Nested PowerManagement module at %08X patched.\n", string - scratch);
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested PowerManagement module at %08X not patched: ", string - module);
+            printf("Nested PowerManagement module at %08X not patched: ", string - scratch);
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -606,12 +651,12 @@ UINT8 patch_nested_module(UINT8* module)
             
             if (!result)
             {
-                printf("Nested PowerManagement2.efi module at %08X patched.\n", string - module);
+                printf("Nested PowerManagement2.efi module at %08X patched.\n", string - scratch);
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested PowerManagement2.efi module at %08X not patched: ", string - module);
+            printf("Nested PowerManagement2.efi module at %08X not patched: ", string - scratch);
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -650,6 +695,60 @@ UINT8 patch_nested_module(UINT8* module)
             }
         }
         
+        // Searching for all SmmPlatform modules 
+        for (string = find_pattern(scratch, decompressed_size, SMMPLATFORM_UUID, UUID_LENGTH);
+             string;
+             string = find_pattern(string + UUID_LENGTH, decompressed_size - (string - scratch) - UUID_LENGTH, SMMPLATFORM_UUID, UUID_LENGTH))
+        {
+            // Patching SmmPlatform module 
+            result = patch_smmplatform_module(string);
+            
+            if (!result)
+            {
+                printf("Nested SmmPlatform module at %08X patched.\n", string - scratch);
+                is_module_patched = TRUE;
+                continue;
+            }
+
+            printf("Nested SmmPlatform module at %08X not patched: ", string - scratch);
+            switch (result)
+            {
+            case ERR_INVALID_ARGUMENT:
+                printf("Invalid parameter.\n");
+                break;
+            case ERR_NOT_MODULE:
+                printf("Unknown module state.\n");
+                break;
+            case ERR_UNKNOWN_MODULE:
+                printf("Unknown module structure.\n");
+                break;
+            case ERR_UNKNOWN_COMPRESSION_TYPE:
+                printf("Unknown compression type.\n");
+                break;
+            case ERR_TIANO_DECOMPRESSION_FAILED:
+                printf("Tiano decompression failed.\n");
+                break;
+            case ERR_LZMA_DECOMPRESSION_FAILED:
+                printf("LZMA decompression failed.\n");
+                break;
+            case ERR_PATCH_STRING_NOT_FOUND:
+                printf("Patch pattern not found.\n");
+                break;
+            case ERR_TIANO_COMPRESSION_FAILED:
+                printf("Tiano compression failed.\n");
+                break;
+            case ERR_LZMA_COMPRESSION_FAILED:
+                printf("LZMA compression failed.\n");
+                break;
+            case ERR_MEMORY_ALLOCATION_FAILED:
+                printf("Memory allocation failed.\n");
+                break;
+            default:
+                printf("Unknown error.\n");
+                break;
+            }
+        }
+
         if (!is_module_patched)
             return ERR_MODULE_NOT_FOUND;
         
