@@ -14,7 +14,7 @@
 #ifndef __PATCH_H__
 #define __PATCH_H__
 
-#include "Common/UefiBaseTypes.h"
+#include "Common/BaseTypes.h"
 
 // Patches BIOS 
 BOOLEAN patch_bios(UINT8* bios, UINT32 size);

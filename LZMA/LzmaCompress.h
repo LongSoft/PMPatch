@@ -7,24 +7,25 @@
   http://opensource.org/licenses/bsd-license.php
 
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 */
 
 #ifndef __LZMACOMPRESS_H__
 #define __LZMACOMPRESS_H__
 
-#include "../Common/UefiBaseTypes.h"
+#include "Sdk/C/Types.h"
+#include "../Common/BaseTypes.h"
 
 #define LZMA_DICTIONARY_SIZE 0x800000
 
-EFI_STATUS
+INT32
 EFIAPI
 LzmaCompress (
-  IN CONST VOID  *Source,
-  IN UINTN       SourceSize,
-  IN OUT VOID    *Destination,
-  IN OUT UINTN   *DestinationSize
+  CONST VOID  *Source,
+  SizeT       SourceSize,
+  VOID    *Destination,
+  SizeT   *DestinationSize
   );
 
 #endif

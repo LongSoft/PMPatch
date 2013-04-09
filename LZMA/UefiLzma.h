@@ -7,14 +7,14 @@
   http://opensource.org/licenses/bsd-license.php
 
   THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
-  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
+  WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 */
 
 #ifndef __UEFILZMA_H__
 #define __UEFILZMA_H__
 
-#include "../Common/UefiBaseTypes.h"
+#include "../Common/BaseTypes.h"
 
 #ifdef _WIN32
 #undef _WIN32

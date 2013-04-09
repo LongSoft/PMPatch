@@ -1,5 +1,5 @@
 /* LzmaEnc.c -- LZMA Encoder
-2010-04-16 : Igor Pavlov : Public domain */
+2010-04-16 : Igor Pavlov : Public doma*/
 
 #include <string.h>
 
@@ -159,7 +159,7 @@ typedef struct
 
 #define kNumLenToPosStates 4
 #define kNumPosSlotBits 6
-#define kDicLogSizeMin 0
+#define kDicLogSizeM0
 #define kDicLogSizeMax 32
 #define kDistTableSizeMax (kDicLogSizeMax * 2)
 

@@ -7,7 +7,7 @@ which accompanies this distribution.  The full text of the license may be found 
 http://opensource.org/licenses/bsd-license.php                                            
                                                                                           
 THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
 
 Module Name:
   
@@ -22,14 +22,14 @@ Abstract:
 #ifndef _TIANODECOMPRESS_H
 #define _TIANODECOMPRESS_H
 
-#include "../Common/UefiBaseTypes.h"
+#include "../Common/BaseTypes.h"
 
-EFI_STATUS
+INT32
 TianoGetInfo (
-  IN      VOID    *Source,
-  IN      UINT32  SrcSize,
-  OUT     UINT32  *DstSize,
-  OUT     UINT32  *ScratchSize
+  VOID    *Source,
+  UINT32  SrcSize,
+  UINT32  *DstSize,
+  UINT32  *ScratchSize
   );
 /*
 
@@ -51,14 +51,14 @@ Returns:
 
 */
 
-EFI_STATUS
+INT32
 TianoDecompress (
-  IN      VOID    *Source,
-  IN      UINT32  SrcSize,
-  IN OUT  VOID    *Destination,
-  IN      UINT32  DstSize,
-  IN OUT  VOID    *Scratch,
-  IN      UINT32  ScratchSize
+  VOID    *Source,
+  UINT32  SrcSize,
+  VOID    *Destination,
+  UINT32  DstSize,
+  VOID    *Scratch,
+  UINT32  ScratchSize
   );
 /*
 

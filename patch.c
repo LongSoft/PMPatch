@@ -196,30 +196,28 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     switch (compressed_header->compression_type)
     {
     case COMPRESSION_TIANO:
-        if (TianoGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS
+        if (TianoGetInfo(data, data_size, &decompressed_size, &scratch_size) != ERR_SUCCESS
             ||  decompressed_size != compressed_header->decompressed_size)
             return ERR_TIANO_DECOMPRESSION_FAILED;
 
         decompressed = (UINT8*)malloc(decompressed_size);
         scratch = (UINT8*)malloc(scratch_size);
 
-        if (TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != EFI_SUCCESS)
+        if (TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != ERR_SUCCESS)
             return ERR_TIANO_DECOMPRESSION_FAILED;
         free(scratch);
         break;
     case COMPRESSION_LZMA:
-        if (LzmaGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS
+        if (LzmaGetInfo(data, data_size, &decompressed_size) != ERR_SUCCESS
             ||  decompressed_size != compressed_header->decompressed_size)
             return ERR_LZMA_DECOMPRESSION_FAILED;
 
         decompressed = (UINT8*)malloc(decompressed_size);
-        scratch = (UINT8*)malloc(scratch_size);
-        if (!decompressed || !scratch)
+        if (!decompressed)
             return ERR_MEMORY_ALLOCATION_FAILED;
 
-        if (LzmaDecompress(data, data_size, decompressed, scratch) != EFI_SUCCESS)
+        if (LzmaDecompress(data, data_size, decompressed) != ERR_SUCCESS)
             return ERR_LZMA_DECOMPRESSION_FAILED;
-        free(scratch);
         break;
     case COMPRESSION_NONE:
         decompressed = data;
@@ -255,22 +253,22 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
         {
         case COMPRESSION_TIANO:
             compressed_size = 0;
-            if (TianoCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
+            if (TianoCompress(decompressed, decompressed_size, compressed, &compressed_size) != ERR_BUFFER_TOO_SMALL)
                 return ERR_TIANO_COMPRESSION_FAILED;
             compressed = (UINT8*)malloc(compressed_size);
             if (!compressed)
                 return ERR_MEMORY_ALLOCATION_FAILED;
-            if (TianoCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
+            if (TianoCompress(decompressed, decompressed_size, compressed, &compressed_size) != ERR_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
             break;
         case COMPRESSION_LZMA:
             compressed_size = 0;
-            if(LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
+            if(LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != ERR_BUFFER_TOO_SMALL)
                 return ERR_LZMA_COMPRESSION_FAILED;
             compressed = (UINT8*)malloc(compressed_size);
             if (!compressed)
                 return ERR_MEMORY_ALLOCATION_FAILED;
-            if (LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
+            if (LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != ERR_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
             grow = data_size > compressed_size ? data_size - compressed_size : compressed_size - data_size;
             break;
@@ -528,7 +526,7 @@ UINT8 patch_nested_module(UINT8* module)
     switch (compressed_header->compression_type)
     {
     case COMPRESSION_TIANO:
-        if (TianoGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS
+        if (TianoGetInfo(data, data_size, &decompressed_size, &scratch_size) != ERR_SUCCESS
             ||  decompressed_size != compressed_header->decompressed_size)
             return ERR_TIANO_DECOMPRESSION_FAILED;
 
@@ -537,23 +535,21 @@ UINT8 patch_nested_module(UINT8* module)
         if (!decompressed || !scratch)
             return ERR_MEMORY_ALLOCATION_FAILED;
 
-        if (TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != EFI_SUCCESS)
+        if (TianoDecompress(data, data_size, decompressed, decompressed_size, scratch, scratch_size) != ERR_SUCCESS)
             return ERR_TIANO_DECOMPRESSION_FAILED;
         free(scratch);
         break;
     case COMPRESSION_LZMA:
-        if (LzmaGetInfo(data, data_size, &decompressed_size, &scratch_size) != EFI_SUCCESS
+        if (LzmaGetInfo(data, data_size, &decompressed_size) != ERR_SUCCESS
             ||  decompressed_size != compressed_header->decompressed_size)
             return ERR_LZMA_DECOMPRESSION_FAILED;
 
         decompressed = (UINT8*)malloc(decompressed_size);
-        scratch = (UINT8*)malloc(scratch_size);
-        if (!decompressed || !scratch)
+        if (!decompressed)
             return ERR_MEMORY_ALLOCATION_FAILED;
 
-        if (LzmaDecompress(data, data_size, decompressed, scratch) != EFI_SUCCESS)
+        if (LzmaDecompress(data, data_size, decompressed) != ERR_SUCCESS)
             return ERR_LZMA_DECOMPRESSION_FAILED;
-        free(scratch);
         break;
     case COMPRESSION_NONE:
         decompressed = data;
@@ -758,23 +754,23 @@ UINT8 patch_nested_module(UINT8* module)
         case COMPRESSION_TIANO:
             compressed = 0;
             compressed_size = 0;
-            if (TianoCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
+            if (TianoCompress(scratch, decompressed_size, compressed, &compressed_size) != ERR_BUFFER_TOO_SMALL)
                 return ERR_TIANO_COMPRESSION_FAILED;
             compressed = (UINT8*)malloc(compressed_size);
             if(!compressed)
                 return ERR_MEMORY_ALLOCATION_FAILED;
-            if (TianoCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
+            if (TianoCompress(scratch, decompressed_size, compressed, &compressed_size) != ERR_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
             break;
         case COMPRESSION_LZMA:
             compressed = 0;
             compressed_size = 0;
-            if(LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_BUFFER_TOO_SMALL)
+            if(LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != ERR_BUFFER_TOO_SMALL)
                 return ERR_LZMA_COMPRESSION_FAILED;
             compressed = (UINT8*)malloc(compressed_size);
             if(!compressed)
                 return ERR_MEMORY_ALLOCATION_FAILED;
-            if (LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != EFI_SUCCESS)
+            if (LzmaCompress(scratch, decompressed_size, compressed, &compressed_size) != ERR_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
             break;
         case COMPRESSION_NONE:

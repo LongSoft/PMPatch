@@ -16,14 +16,6 @@
 
 #include "patch.h"
 
-// Return codes 
-#define ERR_OK                           0
-#define ERR_ARGS                         1
-#define ERR_INPUT_FILE                   2
-#define ERR_OUTPUT_FILE                  3
-#define ERR_MEMORY                       4
-#define ERR_NOT_PATCHED					 5
-
 int main(int argc, char* argv[])
 {
     FILE* file;
@@ -33,12 +25,12 @@ int main(int argc, char* argv[])
     size_t filesize;
     size_t read;
 
-    printf("PMPatch 0.5.11\n");
+    printf("PMPatch 0.5.12\n");
     if(argc < 3)
     {
         printf("This program patches UEFI BIOS files\nto be compatible with Mac OS X SpeedStep implementation\n\n"
             "Usage: PMPatch INFILE OUTFILE\n\n");
-        return ERR_ARGS;
+        return ERR_INVALID_PARAMETER;
     }
 
     inputfile = argv[1];
@@ -49,7 +41,7 @@ int main(int argc, char* argv[])
     if (!file)
     {
         perror("Can't open input file.\n");
-        return ERR_INPUT_FILE;
+        return ERR_FILE_OPEN;
     }
 
     // Determining file size 
@@ -62,7 +54,7 @@ int main(int argc, char* argv[])
     if (!buffer)
     {
         fprintf(stderr, "Can't allocate memory for buffer.\n");
-        return ERR_MEMORY;
+        return ERR_OUT_OF_MEMORY;
     }
 
     // Reading whole file to buffer 
@@ -70,7 +62,7 @@ int main(int argc, char* argv[])
     if (read != filesize)
     {
         perror("Can't read input file.\n");
-        return ERR_INPUT_FILE;
+        return ERR_FILE_READ;
     }
 
     // Closing input file 
@@ -79,25 +71,26 @@ int main(int argc, char* argv[])
     // Patching BIOS 
     if(!patch_bios(buffer, (UINT32)filesize))
         return ERR_NOT_PATCHED;
-    printf("Output file generated.\n");
+    
 
     // Creating output file
     file = fopen(outputfile, "wb");
     if (!file)
     {
         perror("Can't create output file.\n");
-        return ERR_OUTPUT_FILE;
+        return ERR_FILE_OPEN;
     }
 
     // Writing modified BIOS file
     if(fwrite(buffer, sizeof(char), filesize, file) != filesize)
     {
         perror("Can't write output file.\n");
-        return ERR_OUTPUT_FILE;
+        return ERR_FILE_WRITE;
     }
 
     // Closing output file 
     fclose(file);
+    printf("Output file generated.\n");
 
-    return ERR_OK;
+    return ERR_SUCCESS;
 }

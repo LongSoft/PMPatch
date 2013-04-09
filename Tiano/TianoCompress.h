@@ -7,7 +7,7 @@ which accompanies this distribution.  The full text of the license may be found 
 http://opensource.org/licenses/bsd-license.php                                            
                                                                                           
 THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,                     
-WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
+WITHWARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.             
 
 Module Name:
 
@@ -25,7 +25,7 @@ Abstract:
 #include <string.h>
 #include <stdlib.h>
 
-#include "../Common/UefiBaseTypes.h"
+#include "../Common/BaseTypes.h"
 
 /*++
 
@@ -43,19 +43,19 @@ Arguments:
 
 Returns:
 
-  EFI_BUFFER_TOO_SMALL  - The DstBuffer is too small. In this case,
+  EFI_BUFFER_TOO_SMALL  - The DstBuffer is too small. this case,
                           DstSize contains the size needed.
   EFI_SUCCESS           - Compression is successful.
   EFI_OUT_OF_RESOURCES  - No resource to complete function.
   EFI_INVALID_PARAMETER - Parameter supplied is wrong.
 
 --*/
-EFI_STATUS
+INT32
 TianoCompress (
-  IN      UINT8   *SrcBuffer,
-  IN      UINT32  SrcSize,
-  IN      UINT8   *DstBuffer,
-  IN OUT  UINT32  *DstSize
+  UINT8   *SrcBuffer,
+  UINT32  SrcSize,
+  UINT8   *DstBuffer,
+  UINT32  *DstSize
   )
 ;
 
