@@ -155,6 +155,7 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     module_header *header;
     common_section_header *common_header;
     compressed_section_header *compressed_header;
+	guid_section_header *guid_header;
     UINT8* data;
     UINT32 data_size;
     UINT8* compressed;
@@ -170,6 +171,7 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     UINT32 grow;
     UINT32 freespace_length;
     UINT8* end;
+	UINT8 allignment;
 
     if(!module || start_patch >= PATCHED_PATTERNS_COUNT)
         return ERR_INVALID_ARGUMENT;
@@ -181,15 +183,52 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     data = module + sizeof(module_header);
         
     common_header = (common_section_header*) data;
-    // Skipping DXE dependency section in the beginning of PowerManagement module 
-    if (common_header->type == SECTION_DXE_DEPEX)
+    // PowerManagement and PowerMgmtDxe modules, continue execution 
+    if (common_header->type == SECTION_DXE_DEPEX) 
         data += size2int(common_header->size);
-    else 
+    // PowerManagement2.efi module special case
+	else if (common_header->type == SECTION_GUID_DEFINED) 
+	{
+		guid_header = (guid_section_header*) data;
+		data += guid_header->data_offset;
+
+		// Searching for specific patch patterns first 
+		string = find_pattern(data, size2int(guid_header->size), POWERMANAGEMENT_PATCH_PATTERN_80FB01, sizeof(POWERMANAGEMENT_PATCH_PATTERN_80FB01));
+		if(string)
+		{
+			// Patching first 3 bytes with 0x90
+			memset(string, 0x90, 3);
+			string += 3;
+		}
+		else
+			// Searching for generic patch pattern
+			string = find_pattern(data, size2int(guid_header->size), POWERMANAGEMENT_PATCH_PATTERN, sizeof(POWERMANAGEMENT_PATCH_PATTERN));
+		if (!string)
+			return ERR_PATCH_STRING_NOT_FOUND;
+
+		// Patching
+		memcpy(string, POWERMANAGEMENT_PATCHED_PATTERNS[start_patch], sizeof(POWERMANAGEMENT_PATCH_PATTERN));
+
+		// Correcting checksums
+		return correct_checksums(module);
+	}
+	else
         return ERR_UNKNOWN_MODULE;
 
+	// Skipping section allignment bytes
+	allignment = (data - module) % SECTION_ALLIGNMENT;
+	if (allignment)
+		data += SECTION_ALLIGNMENT - allignment;
+
+	// Reading compressed header
     compressed_header = (compressed_section_header*) data;
-    data += sizeof(compressed_section_header);
-    data_size = size2int(compressed_header->size) - sizeof(compressed_section_header);
+	if (compressed_header->type == SECTION_COMPRESSED)
+	{
+		data += sizeof(compressed_section_header);
+		data_size = size2int(compressed_header->size) - sizeof(compressed_section_header);
+	}
+	else
+		return ERR_UNKNOWN_MODULE;
 
     // Decompressing module data 
     compressed = NULL;
@@ -323,50 +362,6 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
     return correct_checksums(module);
 }
 
-UINT8 patch_powermanagement2_module(UINT8* module,  UINT8 start_patch)
-{
-    module_header* header; 
-    UINT8* string;
-    UINT8* data;
-    guid_section_header *guid_header;
-
-    if(!module || start_patch >= PATCHED_PATTERNS_COUNT)
-        return ERR_INVALID_ARGUMENT;
-
-    header = (module_header*) module;
-    if (header->state != STATE_STD)
-        return ERR_NOT_MODULE; 
-
-    data = module + sizeof(module_header);
-
-    guid_header = (guid_section_header*) data;
-    // Skipping GUID definition section in the beginning of PowerManagement2.efi module 
-    if (guid_header->type == SECTION_GUID_DEFINED)
-        data += guid_header->data_offset;
-    else 
-        return ERR_UNKNOWN_MODULE;
-
-    // Searching for specific patch patterns first 
-    string = find_pattern(data, size2int(guid_header->size), POWERMANAGEMENT_PATCH_PATTERN_80FB01, sizeof(POWERMANAGEMENT_PATCH_PATTERN_80FB01));
-    if(string)
-    {
-        // Patching first 3 bytes with 0x90
-        memset(string, 0x90, 3);
-        string += 3;
-    }
-    else
-        // Searching for generic patch pattern
-        string = find_pattern(data, size2int(guid_header->size), POWERMANAGEMENT_PATCH_PATTERN, sizeof(POWERMANAGEMENT_PATCH_PATTERN));
-    if (!string)
-        return ERR_PATCH_STRING_NOT_FOUND;
-
-    // Patching
-    memcpy(string, POWERMANAGEMENT_PATCHED_PATTERNS[start_patch], sizeof(POWERMANAGEMENT_PATCH_PATTERN));
-
-    // Correcting checksums
-    return correct_checksums(module);  
-}
-
 UINT8 patch_smmplatform_module(UINT8* module)
 {
     module_header* header; 
@@ -374,6 +369,7 @@ UINT8 patch_smmplatform_module(UINT8* module)
     UINT8* data;
     guid_section_header *guid_header;
     common_section_header *depex_header;
+	UINT8 allignment;
 
     if(!module)
         return ERR_INVALID_ARGUMENT;
@@ -390,6 +386,11 @@ UINT8 patch_smmplatform_module(UINT8* module)
         data += guid_header->data_offset;
     else 
         return ERR_UNKNOWN_MODULE;
+
+	// Skipping section allignment bytes
+	allignment = (data - module) % SECTION_ALLIGNMENT;
+	if (allignment)
+		data += SECTION_ALLIGNMENT - allignment;
 
     depex_header = (common_section_header*) data;
     // Skipping DXE dependency section in the beginning of SmmPlatform module 
@@ -433,8 +434,7 @@ UINT8 patch_platformsetupadvanced_module(UINT8* module)
         data += guid_header->data_offset;
     else 
         return ERR_UNKNOWN_MODULE;
-
-    
+	    
     // Searching for Unicode patch string
     string = find_pattern(data, size2int(guid_header->size), PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN, sizeof(PLATFORMSETUPADVANCED_UNICODE_PATCH_PATTERN));
     if(string)
@@ -637,22 +637,22 @@ UINT8 patch_nested_module(UINT8* module)
             }
         }
 
-        // Searching for all PowerManagement2.efi modules 
-        for (string = find_pattern(scratch, decompressed_size, POWERMANAGEMENT2_UUID, UUID_LENGTH);
+		// Searching for all PowerMgmtDxe modules 
+        for (string = find_pattern(scratch, decompressed_size, POWERMGMTDXE_UUID, UUID_LENGTH);
              string;
-             string = find_pattern(string + UUID_LENGTH, decompressed_size - (string - scratch) - UUID_LENGTH, POWERMANAGEMENT2_UUID, UUID_LENGTH))
+             string = find_pattern(string + UUID_LENGTH, decompressed_size - (string - scratch) - UUID_LENGTH, POWERMGMTDXE_UUID, UUID_LENGTH))
         {
-            // Patching PowerManagement2.efi module 
-            result = patch_powermanagement2_module(string, current_patch);
+            // Patching PowerMgmtDxe module 
+            result = patch_powermanagement_module(string, current_patch);
             
             if (!result)
             {
-                printf("Nested PowerManagement2.efi module at %08X patched.\n", string - scratch);
+                printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", string - scratch);
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested PowerManagement2.efi module at %08X not patched: ", string - scratch);
+            printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", string - scratch);
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -690,7 +690,7 @@ UINT8 patch_nested_module(UINT8* module)
                 break;
             }
         }
-        
+		        
         // Searching for all SmmPlatform modules 
         for (string = find_pattern(scratch, decompressed_size, SMMPLATFORM_UUID, UUID_LENGTH);
              string;
@@ -903,7 +903,63 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
     if (!is_found)
         printf("PowerManagement modules not found.\n");    
 
-    // Searching for all common nested modules
+	// Searching for all PowerManagement modules
+    is_found = FALSE;
+    for (module = find_pattern(bios, size, POWERMGMTDXE_UUID, UUID_LENGTH);
+        module;
+        module = find_pattern(module+UUID_LENGTH, bios_end-module-UUID_LENGTH, POWERMGMTDXE_UUID, UUID_LENGTH)) 
+    {
+        is_found = TRUE;
+        patch_result = patch_powermanagement_module(module, 0);
+        if (!patch_result)
+        {
+            printf("PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", module - bios);
+            is_patched = TRUE;
+            continue;
+        }
+
+        printf("PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", module - bios);
+        switch (patch_result)
+        {
+        case ERR_INVALID_ARGUMENT:
+            printf("Invalid parameter.\n");
+            break;
+        case ERR_UNKNOWN_MODULE:
+            printf("Unknown module structure.\n");
+            break;
+        case ERR_UNKNOWN_COMPRESSION_TYPE:
+            printf("Unknown compression type.\n");
+            break;
+        case ERR_TIANO_DECOMPRESSION_FAILED:
+            printf("Tiano decompression failed.\n");
+            break;
+        case ERR_LZMA_DECOMPRESSION_FAILED:
+            printf("LZMA decompression failed.\n");
+            break;
+        case ERR_PATCH_STRING_NOT_FOUND:
+            printf("Patch pattern not found.\n");
+            break;
+        case ERR_TIANO_COMPRESSION_FAILED:
+            printf("Tiano compression failed.\n");
+            break;
+        case ERR_LZMA_COMPRESSION_FAILED:
+            printf("LZMA compression failed.\n");
+            break;
+        case ERR_PATCHED_MODULE_INSERTION_FAILED:
+            printf("Repacked module can't be inserted.\n");
+            break;
+        case ERR_MEMORY_ALLOCATION_FAILED:
+            printf("Memory allocation failed.\n");
+            break;
+        default:
+            printf("Unknown error.\n");
+            break;
+        }
+    }
+    if (!is_found)
+        printf("PowerMgmtDxe/PowerManagement2.efi modules not found.\n");
+
+    // Searching for all AMI nest modules
     is_found = FALSE;
     for (module = find_pattern(bios, size, AMI_NEST_UUID, UUID_LENGTH);
         module;
@@ -959,12 +1015,11 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             printf("Unknown error.\n");
             break;
         }
-
     }
     if (!is_found)
         printf("AMI nest modules not found.\n"); 
 
-    // Searching for all nested PowerManagement2.efi modules
+    // Searching for all Phoenix nest modules
     is_found = FALSE;
     for (module = find_pattern(bios, size, PHOENIX_NEST_UUID, UUID_LENGTH);
         module;
@@ -979,10 +1034,10 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             is_patched = TRUE;
 
             // Fixing RAW file checksum in Dell BIOSes
-            raw_file = find_pattern(bios, size, DELL_RAW_FILE_UUID, UUID_LENGTH);
+            raw_file = find_pattern(bios, size, PHOENIX_RAW_FILE_UUID, UUID_LENGTH);
             if(raw_file)
                 if(!correct_checksums(raw_file))
-                    printf("Dell RAW file checksums corrected.\n");
+                    printf("Phoenix RAW file checksums corrected.\n");
             continue;
         }
 
