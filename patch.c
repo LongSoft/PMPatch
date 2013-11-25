@@ -309,7 +309,6 @@ UINT8 patch_powermanagement_module(UINT8* module, UINT8 start_patch)
                 return ERR_MEMORY_ALLOCATION_FAILED;
             if (LzmaCompress(decompressed, decompressed_size, compressed, &compressed_size) != ERR_SUCCESS)
                 return ERR_TIANO_COMPRESSION_FAILED;
-            grow = data_size > compressed_size ? data_size - compressed_size : compressed_size - data_size;
             break;
         case COMPRESSION_NONE:
             compressed = decompressed;
@@ -565,7 +564,7 @@ UINT8 patch_nested_module(UINT8* module)
     {
         result = patch_platformsetupadvanced_module(string);
         if (!result)
-            printf("Nested PlatformSetupAdvancedDxe.efi at %08X patched.\n", string - module);
+            printf("Nested PlatformSetupAdvancedDxe.efi at %08X patched.\n", (UINT32)(string - module));
     }
 
     // Trying to patch PowerManagement modules with all patch patterns
@@ -593,12 +592,12 @@ UINT8 patch_nested_module(UINT8* module)
             
             if (!result)
             {
-                printf("Nested PowerManagement module at %08X patched.\n", string - scratch);
+                printf("Nested PowerManagement module at %08X patched.\n", (UINT32)(string - scratch));
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested PowerManagement module at %08X not patched: ", string - scratch);
+            printf("Nested PowerManagement module at %08X not patched: ", (UINT32)(string - scratch));
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -647,12 +646,12 @@ UINT8 patch_nested_module(UINT8* module)
             
             if (!result)
             {
-                printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", string - scratch);
+                printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", (UINT32)(string - scratch));
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", string - scratch);
+            printf("Nested PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", (UINT32)(string - scratch));
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -701,12 +700,12 @@ UINT8 patch_nested_module(UINT8* module)
             
             if (!result)
             {
-                printf("Nested SmmPlatform module at %08X patched.\n", string - scratch);
+                printf("Nested SmmPlatform module at %08X patched.\n", (UINT32)(string - scratch));
                 is_module_patched = TRUE;
                 continue;
             }
 
-            printf("Nested SmmPlatform module at %08X not patched: ", string - scratch);
+            printf("Nested SmmPlatform module at %08X not patched: ", (UINT32)(string - scratch));
             switch (result)
             {
             case ERR_INVALID_ARGUMENT:
@@ -857,12 +856,12 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         patch_result = patch_powermanagement_module(module, 0);
         if (!patch_result)
         {
-            printf("PowerManagement module at %08X patched.\n", module - bios);
+            printf("PowerManagement module at %08X patched.\n", (UINT32)(module - bios));
             is_patched = TRUE;
             continue;
         }
 
-        printf("PowerManagement module at %08X not patched: ", module - bios);
+        printf("PowerManagement module at %08X not patched: ", (UINT32)(module - bios));
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
@@ -913,12 +912,12 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
         patch_result = patch_powermanagement_module(module, 0);
         if (!patch_result)
         {
-            printf("PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", module - bios);
+            printf("PowerMgmtDxe/PowerManagement2.efi module at %08X patched.\n", (UINT32)(module - bios));
             is_patched = TRUE;
             continue;
         }
 
-        printf("PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", module - bios);
+        printf("PowerMgmtDxe/PowerManagement2.efi module at %08X not patched: ", (UINT32)(module - bios));
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
@@ -970,12 +969,12 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
         if (!patch_result)
         {
-            printf("AMI nest module at %08X patched.\n", module - bios);
+            printf("AMI nest module at %08X patched.\n", (UINT32)(module - bios));
             is_patched = TRUE;
             continue;
         }
 
-        printf("AMI nest module at %08X not patched: ", module - bios);
+        printf("AMI nest module at %08X not patched: ", (UINT32)(module - bios));
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
@@ -1030,7 +1029,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
         if (!patch_result)
         {
-            printf("Phoenix nest module at %08X patched.\n", module - bios);
+            printf("Phoenix nest module at %08X patched.\n", (UINT32)(module - bios));
             is_patched = TRUE;
 
             // Fixing RAW file checksum in Dell BIOSes
@@ -1041,7 +1040,7 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
             continue;
         }
 
-        printf("Phoenix nest module at %08X not patched: ", module - bios);
+        printf("Phoenix nest module at %08X not patched: ", (UINT32)(module - bios));
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:
@@ -1096,12 +1095,12 @@ BOOLEAN patch_bios(UINT8* bios, UINT32 size)
 
         if (!patch_result)
         {
-            printf("CpuPei module at %08X patched.\n", module - bios);
+            printf("CpuPei module at %08X patched.\n", (UINT32)(module - bios));
             is_patched = TRUE;
             continue;
         }
 
-        printf("CpuPei module at %08X not patched: ", module - bios);
+        printf("CpuPei module at %08X not patched: ", (UINT32)(module - bios));
         switch (patch_result)
         {
         case ERR_INVALID_ARGUMENT:

@@ -61,9 +61,9 @@ INT32
     EFIAPI
     LzmaCompress (
     CONST VOID  *Source,
-    SizeT       SourceSize,
+    UINT32       SourceSize,
     VOID    *Destination,
-    SizeT   *DestinationSize
+    UINT32   *DestinationSize
     )
 {
     SRes              LzmaResult;
